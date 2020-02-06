@@ -2,7 +2,7 @@ SET(EXTPREFIX_eigen3 "${EXTPREFIX}" )
 ExternalProject_Add( ext_eigen3
     DOWNLOAD_DIR ${EXTERNALS_DOWNLOAD_DIR}
     # eigen 3.3.4: bitbucket does weird things when downloading.
-    URL http://kde.freemirror.org/kde/files/krita/build/dependencies/eigen-eigen-5a0156e40feb.tar.gz
+    URL http://web.archive.org/web/20200205194127/http://kde.freemirror.org/kde/files/krita/build/dependencies/eigen-eigen-5a0156e40feb.tar.gz
     URL_MD5 1a47e78efe365a97de0c022d127607c3
 
     INSTALL_DIR ${EXTPREFIX_eigen3}
