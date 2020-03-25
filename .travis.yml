@@ -25,7 +25,7 @@ install:
   - rm android-ndk-r18b-linux-x86_64.zip
 script:
   - cd packaging/android
-  - ./androidbuild.sh -p=all --src="${KRITA_SRC}" --build-type="${KRITA_BUILD_TYPE}" --build-root="${KRITA_BUILD_WORKSPACE}" --ndk-path="${ANDROID_NDK_HOME}" --sdk-path="${ANDROID_HOME}" --api-level=21 --android-abi="${KRITA_BUILD_ARCHITECTURE}"
+  - travis_wait 600 ./androidbuild.sh -p=all --src="${KRITA_SRC}" --build-type="${KRITA_BUILD_TYPE}" --build-root="${KRITA_BUILD_WORKSPACE}" --ndk-path="${ANDROID_NDK_HOME}" --sdk-path="${ANDROID_HOME}" --api-level=21 --android-abi="${KRITA_BUILD_ARCHITECTURE}"
 after_success:
   - echo -e "\e[1;32m%%%%% BUILD SUCCESS %%%%%\e[m"
   - echo -n "APK -> "
