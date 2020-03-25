@@ -1,0 +1,26 @@
+language: android
+os: linux  # GNU/Linux
+dist: xenial
+sudo: false
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-28.0.3
+    - android-21
+    - android-28
+env:
+  - ANDROID_SDK_ROOT="${ANDROID_HOME}" ANDROID_NDK_HOME="${HOME}/android-ndk-r18b" ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}" ANDROID_NDK="${ANDROID_NDK_HOME}" KRITA_SRC="${PWD}" KRITA_BUILD_TYPE="Release" KRITA_BUILD_ARCHITECTURE="arm64-v8a" KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+install:
+  - wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+  - unzip android-ndk-r18b-linux-x86_64.zip -d ${HOME}
+  - rm android-ndk-r18b-linux-x86_64.zip
+script:
+  - cd packaging/android
+  - ./androidbuild.sh -p=all --src="${KRITA_SRC}" --build-type="${KRITA_BUILD_TYPE}" --build-root="${KRITA_BUILD_WORKSPACE}" --ndk-path="${ANDROID_NDK_HOME}" --sdk-path="${ANDROID_HOME}" --api-level=21 --android-abi="${KRITA_BUILD_ARCHITECTURE}"
+after_success:
+  - echo -e "\e[1;32m##### BUILD SUCCESS #####\e[m"
+  - echo -n "APK: "
+  - ls "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"
+after_failure:
+  - echo -e "\e[1;31m##### BUILD FAILURE #####\e[m"
