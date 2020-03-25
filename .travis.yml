@@ -13,6 +13,9 @@ addons:
   apt:
     packages:
       - perl-modules
+      - libio-socket-ssl-perl
+      - libyaml-perl
+      - libyaml-libyaml-perl
 env:
   - ANDROID_HOME="$HOME/android-sdk" ANDROID_SDK_ROOT="${ANDROID_HOME}" ANDROID_NDK_HOME="${HOME}/android-ndk-r18b" ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}" ANDROID_NDK="${ANDROID_NDK_HOME}" KRITA_SRC="${PWD}" KRITA_BUILD_TYPE="Release" KRITA_BUILD_ARCHITECTURE="arm64-v8a" KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
 install:
