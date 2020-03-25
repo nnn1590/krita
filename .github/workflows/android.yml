@@ -1,0 +1,183 @@
+name: Build Krita for Android
+
+on:
+  push:
+    branches: [ github-actions ]
+
+jobs:
+  build-armeabi-v7a:
+    runs-on: ubuntu-18.04
+    env:
+       ANDROID_HOME: "$HOME/android-sdk"
+       ANDROID_SDK_ROOT: "${ANDROID_HOME}"
+       ANDROID_NDK_HOME: "${HOME}/android-ndk-r18b"
+       ANDROID_NDK_ROOT: "${ANDROID_NDK_HOME}"
+       ANDROID_NDK: "${ANDROID_NDK_HOME}"
+       KRITA_SRC: "${PWD}"
+       KRITA_BUILD_TYPE: "Release"
+       KRITA_BUILD_ARCHITECTURE: "armeabi-v7a"
+       KRITA_BUILD_WORKSPACE: "${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+    steps:
+    - uses: actions/checkout@v2 
+    - name: apt update and install
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl
+    - name: Setup Android SDK and NDK
+      run: |
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        cd packaging/android
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then echo -n "APK -> " && ls "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"; fi
+  build-arm64-v8a:
+    runs-on: ubuntu-18.04
+    env:
+       ANDROID_HOME: "$HOME/android-sdk"
+       ANDROID_SDK_ROOT: "${ANDROID_HOME}"
+       ANDROID_NDK_HOME: "${HOME}/android-ndk-r18b"
+       ANDROID_NDK_ROOT: "${ANDROID_NDK_HOME}"
+       ANDROID_NDK: "${ANDROID_NDK_HOME}"
+       KRITA_SRC: "${PWD}"
+       KRITA_BUILD_TYPE: "Release"
+       KRITA_BUILD_ARCHITECTURE: "arm64-v8a"
+       KRITA_BUILD_WORKSPACE: "${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+    steps:
+    - uses: actions/checkout@v2 
+    - name: apt update and install
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl
+    - name: Setup Android SDK and NDK
+      run: |
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        cd packaging/android
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then echo -n "APK -> " && ls "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"; fi
+  build-x86:
+    runs-on: ubuntu-18.04
+    env:
+       ANDROID_HOME: "$HOME/android-sdk"
+       ANDROID_SDK_ROOT: "${ANDROID_HOME}"
+       ANDROID_NDK_HOME: "${HOME}/android-ndk-r18b"
+       ANDROID_NDK_ROOT: "${ANDROID_NDK_HOME}"
+       ANDROID_NDK: "${ANDROID_NDK_HOME}"
+       KRITA_SRC: "${PWD}"
+       KRITA_BUILD_TYPE: "Release"
+       KRITA_BUILD_ARCHITECTURE: "x86"
+       KRITA_BUILD_WORKSPACE: "${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+    steps:
+    - uses: actions/checkout@v2 
+    - name: apt update and install
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl
+    - name: Setup Android SDK and NDK
+      run: |
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        cd packaging/android
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then echo -n "APK -> " && ls "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"; fi
+  build-x86_64:
+    runs-on: ubuntu-18.04
+    env:
+       ANDROID_HOME: "$HOME/android-sdk"
+       ANDROID_SDK_ROOT: "${ANDROID_HOME}"
+       ANDROID_NDK_HOME: "${HOME}/android-ndk-r18b"
+       ANDROID_NDK_ROOT: "${ANDROID_NDK_HOME}"
+       ANDROID_NDK: "${ANDROID_NDK_HOME}"
+       KRITA_SRC: "${PWD}"
+       KRITA_BUILD_TYPE: "Release"
+       KRITA_BUILD_ARCHITECTURE: "x86_64"
+       KRITA_BUILD_WORKSPACE: "${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+    steps:
+    - uses: actions/checkout@v2 
+    - name: apt update and install
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl
+    - name: Setup Android SDK and NDK
+      run: |
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        cd packaging/android
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then echo -n "APK -> " && ls "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"; fi
