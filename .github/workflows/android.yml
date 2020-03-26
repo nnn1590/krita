@@ -26,6 +26,8 @@ jobs:
         export KRITA_BUILD_ARCHITECTURE="armeabi-v7a"
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         EOF
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
@@ -78,6 +80,8 @@ jobs:
         export KRITA_BUILD_ARCHITECTURE="arm64-v8a"
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         EOF
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
@@ -130,6 +134,8 @@ jobs:
         export KRITA_BUILD_ARCHITECTURE="x86"
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         EOF
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
@@ -182,6 +188,8 @@ jobs:
         export KRITA_BUILD_ARCHITECTURE="x86_64"
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         EOF
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
