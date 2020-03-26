@@ -12,7 +12,7 @@ jobs:
     - name: Run apt update and install
       run: |
         sudo apt update
-        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Generate envsetup.sh
       run: |
         cat > envsetup.sh << 'EOF'
@@ -64,7 +64,7 @@ jobs:
     - name: Run apt update and install
       run: |
         sudo apt update
-        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Generate envsetup.sh
       run: |
         cat > envsetup.sh << 'EOF'
@@ -116,7 +116,7 @@ jobs:
     - name: Run apt update and install
       run: |
         sudo apt update
-        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Generate envsetup.sh
       run: |
         cat > envsetup.sh << 'EOF'
@@ -168,7 +168,7 @@ jobs:
     - name: Run apt update and install
       run: |
         sudo apt update
-        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Generate envsetup.sh
       run: |
         cat > envsetup.sh << 'EOF'
