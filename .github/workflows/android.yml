@@ -561,7 +561,7 @@ jobs:
         declare KRITA_BUILD_APK_PATH="${PWD}/${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
         echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
         export KRITA_BUILD_TYPE_INFO_PATH="${PWD}/Krita-build-type"
-        echo "${KRITA_BUILD_TYPE}" > "${n}"
+        echo "${KRITA_BUILD_TYPE}" > "${KRITA_BUILD_TYPE_INFO_PATH}"
         echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::${KRITA_BUILD_TYPE_INFO_PATH}"
     - name: Upload the APK to GitHub artifacts
       if: success()
