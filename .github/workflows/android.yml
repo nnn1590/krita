@@ -561,8 +561,8 @@ jobs:
         declare KRITA_BUILD_APK_PATH="${PWD}/${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
         echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
         export KRITA_BUILD_TYPE_INFO_PATH="${PWD}/Krita-build-type"
-        echo "${KRITA_BUILD_TYPE}" > "${KRITA_BUILD_TYPE_INFO_PATH}"
-        echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::${KRITA_BUILD_INFO_PATH}"
+        echo "${KRITA_BUILD_TYPE}" > "${n}"
+        echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::${KRITA_BUILD_TYPE_INFO_PATH}"
     - name: Upload the APK to GitHub artifacts
       if: success()
       uses: actions/upload-artifact@v1
@@ -595,7 +595,7 @@ jobs:
           echo "\e[1;34m<Info>\e[m Debug build; skip publish release."
           exit 0
         else
-          echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::Release"
+          echo "::set-output name=KRITA_BUILD_TYPE::Release"
         fi
         declare APK_NAME_PREFIX="$(find krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
         declare RELEASE_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
