@@ -579,6 +579,7 @@ jobs:
     needs: [build-armeabi-v7a, build-arm64-v8a, build-x86, build-x86_64, build-all]
     runs-on: ubuntu-18.04
     steps:
+    - uses: actions/checkout@v2
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
       with:
@@ -608,6 +609,8 @@ jobs:
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
         echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
+        git tag "${RELEASE_TAG_NAME}"
+        git push origin "${RELEASE_TAG_NAME}"
         cat > Release-body.txt << 'EOF'
         It can run on Android 5.0 (API 21) Lollipop or later version.
         Built with:
