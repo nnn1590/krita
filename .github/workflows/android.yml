@@ -109,7 +109,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/krita/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -231,7 +231,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/krita/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -353,7 +353,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/krita/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -475,7 +475,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/krita/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -534,12 +534,25 @@ jobs:
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/sign.jks"
         echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
         export PATH="${HOME}/bin:${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        if [ ! "x$(find krita-apk -name 'krita-debug-*')X" == "xX" -a ! "x$(find krita-apk -name 'krita-release-*')X" == "xX" ]; then
+          echo -e "\e[1;31m<Error>\e[m Debug APK(s) and Release APK(s) are mixed"
+          exit 1
+        fi
+        if [ "x$(find krita-apk -name 'krita-debug-*')X" == "xX" -a "x$(find krita-apk -name 'krita-release-*')X" == "xX" ]; then
+          echo -e "\e[1;31m<Error>\e[m APK(s) not found"
+          exit 1
+        fi
+        if [ "x$(find krita-apk -name 'krita-release-*')X" == "xX" ]; then
+          export KRITA_BUILD_TYPE="Debug"
+        else
+          export KRITA_BUILD_TYPE="Release"
+        fi
         mkdir build && cd ${_}
         find ../krita-apk/* -print0 | xargs -0L1 apktool d --no-{res,src}
         declare APK_NAME_PREFIX="$(find ../krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
         cp -a "${APK_NAME_PREFIX}armeabi-v7a" "${APK_NAME_PREFIX}all"
         sed -i -e 's#armeabi\-v7a#all#g' "${APK_NAME_PREFIX}all/apktool.yml"
-        cp -a "${APK_NAME_PREFIX}"{arm64-v8a,x86,x86_64}"/lib/*" "${APK_NAME_PREFIX}all/lib"
+        cp -a "${APK_NAME_PREFIX}"{arm64-v8a,x86,x86_64}"/lib/"* "${APK_NAME_PREFIX}all/lib"
         apktool b "${APK_NAME_PREFIX}all"
         zipalign 4 "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all"{,-aligned}".apk"
         rm "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
@@ -547,12 +560,21 @@ jobs:
         apksigner sign --ks "${KRITA_BUILD_APK_SIGN_STORE_PATH}" --ks-key-alias "${KRITA_BUILD_APK_SIGN_STORE_ALIAS}" --ks-pass env:KRITA_BUILD_APK_SIGN_STORE_PASS --key-pass env:KRITA_BUILD_APK_SIGN_KEY_PASS "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
         declare KRITA_BUILD_APK_PATH="${PWD}/${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
         echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
+        export KRITA_BUILD_TYPE_INFO_PATH="${PWD}/Krita-build-type"
+        echo "${KRITA_BUILD_TYPE}" > "${KRITA_BUILD_TYPE_INFO_PATH}"
+        echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::${KRITA_BUILD_INFO_PATH}"
     - name: Upload the APK to GitHub artifacts
       if: success()
       uses: actions/upload-artifact@v1
       with:
         name: krita-apk
         path: ${{ steps.merge_lib_apk.outputs.KRITA_BUILD_APK_PATH }}
+    - name: Upload Krita build type info to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-build-type
+        path: ${{ steps.merge_lib_apk.outputs.KRITA_BUILD_TYPE_INFO_PATH }}
   release:
     needs: [build-armeabi-v7a, build-arm64-v8a, build-x86, build-x86_64, build-all]
     runs-on: ubuntu-18.04
@@ -561,9 +583,20 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: krita-apk
+    - name: Download Krita build type info from GitHub artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: krita-build-type
     - name: Setup variables
       id: setup_vars
       run: |
+        if [ "$(cat krita-build-type/Krita-build-type)" = "Debug" ]; then
+          echo "::set-output name=KRITA_BUILD_TYPE::Debug"
+          echo "\e[1;34m<Info>\e[m Debug build; skip publish release."
+          exit 0
+        else
+          echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::Release"
+        fi
         declare APK_NAME_PREFIX="$(find krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
         declare RELEASE_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
         declare RELEASE_TAG_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#git##g')"
@@ -615,7 +648,7 @@ jobs:
         </details>
         EOF
     - name: Create pre-release and upload APKs
-      if: contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'true')
+      if: "contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'true') && contains(steps.setup_vars.outputs.KRITA_BUILD_TYPE, 'Release')"
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -632,7 +665,7 @@ jobs:
         prerelease: true
         body_path: Release-body.txt
     - name: Create release and upload APKs
-      if: contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'false')
+      if: "contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'false') && contains(steps.setup_vars.outputs.KRITA_BUILD_TYPE, 'Release')"
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
