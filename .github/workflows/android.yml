@@ -651,7 +651,7 @@ jobs:
       if: "contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'true') && contains(steps.setup_vars.outputs.KRITA_BUILD_TYPE, 'Release')"
       uses: softprops/action-gh-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         files: |
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}all.apk
@@ -659,7 +659,7 @@ jobs:
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}arm64-v8a.apk
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}x86.apk
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}x86_64.apk
-        name: Release ${{ steps.setup_vars.outputs.RELEASE_NAME }}
+        name: ${{ steps.setup_vars.outputs.RELEASE_NAME }}
         tag_name: ${{ steps.setup_vars.outputs.RELEASE_TAG_NAME }}
         draft: false
         prerelease: true
@@ -668,7 +668,7 @@ jobs:
       if: "contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'false') && contains(steps.setup_vars.outputs.KRITA_BUILD_TYPE, 'Release')"
       uses: softprops/action-gh-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         files: |
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}all.apk
@@ -676,7 +676,7 @@ jobs:
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}arm64-v8a.apk
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}x86.apk
           ${{ steps.setup_vars.outputs.APP_NAME_PREFIX }}x86_64.apk
-        name: Release ${{ steps.setup_vars.outputs.RELEASE_NAME }}
+        name: ${{ steps.setup_vars.outputs.RELEASE_NAME }}
         tag_name: ${{ steps.setup_vars.outputs.RELEASE_TAG_NAME }}
         draft: false
         prerelease: false
