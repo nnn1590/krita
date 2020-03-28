@@ -651,7 +651,7 @@ jobs:
           echo "::set-output name=KRITA_BUILD_TYPE::Release"
         fi
         declare APK_NAME_PREFIX="$(find krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
-        declare RELEASE_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
+        declare RELEASE_NAME="v$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
         declare RELEASE_TAG_NAME="v$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#git##g')"
         declare RELEASE_IS_PRERELEASE="false"
         if [[ "${APK_NAME_PREFIX}" == *"prealpha"* ]]; then
@@ -709,11 +709,11 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         files: |
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}all.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}armeabi-v7a.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}arm64-v8a.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86_64.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}all.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}armeabi-v7a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}arm64-v8a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86_64.apk
         name: ${{ steps.setup_vars.outputs.RELEASE_NAME }}
         tag_name: ${{ steps.setup_vars.outputs.RELEASE_TAG_NAME }}
         draft: false
@@ -726,11 +726,11 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         files: |
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}all.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}armeabi-v7a.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}arm64-v8a.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86.apk
-          ${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86_64.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}all.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}armeabi-v7a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}arm64-v8a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86_64.apk
         name: ${{ steps.setup_vars.outputs.RELEASE_NAME }}
         tag_name: ${{ steps.setup_vars.outputs.RELEASE_TAG_NAME }}
         draft: false
