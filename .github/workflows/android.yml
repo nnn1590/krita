@@ -122,7 +122,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -257,7 +257,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -392,7 +392,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -527,7 +527,7 @@ jobs:
           echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
           apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
             echo -e "\e[1;32mSuccessful\e[m"
-            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
             mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
             echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
           ) || (
@@ -651,8 +651,8 @@ jobs:
           echo "::set-output name=KRITA_BUILD_TYPE::Release"
         fi
         declare APK_NAME_PREFIX="$(find krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
-        declare RELEASE_NAME="v$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
-        declare RELEASE_TAG_NAME="v$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#git##g')"
+        declare RELEASE_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
+        declare RELEASE_TAG_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#git##g')"
         declare RELEASE_IS_PRERELEASE="false"
         if [[ "${APK_NAME_PREFIX}" == *"prealpha"* ]]; then
           RELEASE_IS_PRERELEASE="true"
