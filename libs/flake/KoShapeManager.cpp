@@ -49,6 +49,7 @@
 #include <QApplication>
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QTimer>
 #include <FlakeDebug.h>
 
@@ -502,9 +503,11 @@ void KoShapeManager::preparePaintJobs(PaintJobsList &jobs,
             rootShapesSet.insert(shape);
         }
     }
-
-    const QList<KoShape*> rootShapes = rootShapesSet.toList();
-
+#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
+    const QList<KoShape*> rootShapes(rootShapesSet.begin(), rootShapesSet.end());
+#else
+    const QList<KoShape*> rootShapes = QList<KoShape*>::fromSet(rootShapesSet);
+#endif
     QList<KoShape*> newRootShapes;
 
     Q_FOREACH (KoShape *srcShape, rootShapes) {

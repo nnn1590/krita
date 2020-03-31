@@ -280,7 +280,6 @@ find_package(KF5 ${MIN_FRAMEWORKS_VERSION} REQUIRED COMPONENTS
         ItemModels
         ItemViews
         WindowSystem
-        Archive
 )
 
 find_package(Qt5 ${MIN_QT_VERSION}
@@ -294,6 +293,7 @@ find_package(Qt5 ${MIN_QT_VERSION}
         Svg
         Test
         Concurrent
+        Sql
 )
 
 if (ANDROID)
@@ -840,8 +840,7 @@ list (APPEND ANDROID_EXTRA_LIBS ${QUAZIP_LIBRARIES}
                                 ${KF5_LIBRARIES}/libKF5I18n.so
                                 ${KF5_LIBRARIES}/libKF5CoreAddons.so
                                 ${KF5_LIBRARIES}/libKF5ConfigGui.so
-                                ${KF5_LIBRARIES}/libKF5ConfigCore.so
-                                ${KF5_LIBRARIES}/libKF5Archive.so)
+                                ${KF5_LIBRARIES}/libKF5ConfigCore.so)
 
 
 ##

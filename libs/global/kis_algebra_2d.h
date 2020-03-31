@@ -389,6 +389,11 @@ inline T wrapValue(T value, T wrapBounds) {
     return value;
 }
 
+template<typename T>
+inline T wrapValue(T value, T min, T max) {
+    return wrapValue(value - min, max - min) + min;
+}
+
 class RightHalfPlane {
 public:
 
@@ -509,6 +514,9 @@ QVector<QPointF> intersectTwoCircles(const QPointF &c1, qreal r1,
 KRITAGLOBAL_EXPORT
 QTransform mapToRect(const QRectF &rect);
 
+KRITAGLOBAL_EXPORT
+QTransform mapToRectInverse(const QRectF &rect);
+
 /**
  * Scale the relative point \pt into the bounds of \p rc. The point might be
  * outside the rectangle.
@@ -522,10 +530,9 @@ inline QPointF relativeToAbsolute(const QPointF &pt, const QRectF &rc) {
  * outside the rectangle.
  */
 inline QPointF absoluteToRelative(const QPointF &pt, const QRectF &rc) {
-    if (!rc.isValid()) return QPointF();
-
     const QPointF rel = pt - rc.topLeft();
-    return QPointF(rel.x() / rc.width(), rel.y() / rc.height());
+    return QPointF(rc.width() > 0 ? rel.x() / rc.width() : 0,
+                   rc.height() > 0 ? rel.y() / rc.height() : 0);
 
 }
 

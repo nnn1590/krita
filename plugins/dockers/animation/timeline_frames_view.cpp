@@ -54,7 +54,7 @@
 #include <kis_image_config.h>
 
 #include <KoFileDialog.h>
-#include <KoIconToolTip.h>
+#include <KisIconToolTip.h>
 
 typedef QPair<QRect, QModelIndex> QItemViewPaintPair;
 typedef QList<QItemViewPaintPair> QItemViewPaintPairs;
@@ -117,7 +117,7 @@ struct TimelineFramesView::Private
     QItemViewPaintPairs draggablePaintPairs(const QModelIndexList &indexes, QRect *r) const;
     QPixmap renderToPixmap(const QModelIndexList &indexes, QRect *r) const;
 
-    KoIconToolTip tip;
+    KisIconToolTip tip;
 
     KisActionManager *actionMan = 0;
 };
@@ -692,6 +692,7 @@ void TimelineFramesView::slotDataChanged(const QModelIndex &topLeft, const QMode
         int row= index.isValid() ? index.row() : 0;
         selectionModel()->setCurrentIndex(m_d->model->index(row, selectedColumn), QItemSelectionModel::ClearAndSelect);
     }
+
 }
 
 void TimelineFramesView::slotHeaderDataChanged(Qt::Orientation orientation, int first, int last)
@@ -955,6 +956,19 @@ void TimelineFramesView::createFrameEditingMenuActions(QMenu *menu, bool addFram
 
     menu->addSeparator();
 
+    {   // Tween submenu.
+        QMenu *frames = menu->addMenu(i18nc("@item:inmenu", "Tweening"));
+
+        KisActionManager::safePopulateMenu(frames, "insert_opacity_keyframe", m_d->actionMan);
+        KisActionManager::safePopulateMenu(frames, "remove_opacity_keyframe", m_d->actionMan);
+
+        // only allow to add an opacity keyframe if one doesn't exist
+        bool opacityKeyframeExists = model()->data(currentIndex(), TimelineFramesModel::SpecialKeyframeExists).toBool();
+        m_d->actionMan->actionByName("insert_opacity_keyframe")->setEnabled(!opacityKeyframeExists);
+        m_d->actionMan->actionByName("remove_opacity_keyframe")->setEnabled(opacityKeyframeExists);
+    }
+
+
     {   //Frames submenu.
         QMenu *frames = menu->addMenu(i18nc("@item:inmenu", "Keyframes"));
         KisActionManager::safePopulateMenu(frames, "insert_keyframe_left", m_d->actionMan);
@@ -1016,6 +1030,7 @@ void TimelineFramesView::mousePressEvent(QMouseEvent *event)
             model()->setData(index, true, TimelineFramesModel::ActiveLayerRole);
             model()->setData(index, true, TimelineFramesModel::ActiveFrameRole);
             setCurrentIndex(index);
+
 
             if (model()->data(index, TimelineFramesModel::FrameExistsRole).toBool() ||
                     model()->data(index, TimelineFramesModel::SpecialKeyframeExists).toBool()) {
@@ -1216,10 +1231,12 @@ void TimelineFramesView::slotUpdateFrameActions()
     enableAction("copy_frames_to_clipboard", true);
     enableAction("cut_frames_to_clipboard", hasEditableFrames);
 
-    QClipboard *cp = QApplication::clipboard();
-    const QMimeData *data = cp->mimeData();
+    enableAction("insert_opacity_keyframe", hasEditableFrames);
+    enableAction("remove_opacity_keyframe", hasEditableFrames);
 
-    enableAction("paste_frames_from_clipboard", data && data->hasFormat("application/x-krita-frame"));
+    //QClipboard *cp = QApplication::clipboard();
+    //const QMimeData *data = cp->mimeData();
+
 
     //TODO: update column actions!
 }
@@ -1340,7 +1357,11 @@ void TimelineFramesView::insertKeyframes(int count, int timing, TimelineDirectio
     }
 
     if (!rows.isEmpty()) {
-        m_d->model->insertFrames(insertionColumn, rows.toList(), count, timing);
+#if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
+        m_d->model->insertFrames(insertionColumn, QList<int>(rows.begin(), rows.end()), count, timing);
+#else
+        m_d->model->insertFrames(insertionColumn, QList<int>::fromSet(rows), count, timing);
+#endif
     }
 }
 

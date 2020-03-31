@@ -27,40 +27,46 @@
 #include <QBitmap>
 #include <QCheckBox>
 #include <QCursor>
-#include <QLabel>
-#include <QLayout>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QSlider>
-#include <QToolButton>
-#include <QThread>
-#include <QStandardPaths>
-#include <QGroupBox>
-#include <QGridLayout>
-#include <QRadioButton>
-#include <QMdiArea>
-#include <QMessageBox>
 #include <QDesktopWidget>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLayout>
+#include <QLineEdit>
+#include <QMdiArea>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QRadioButton>
 #include <QSettings>
+#include <QSlider>
+#include <QStandardPaths>
+#include <QThread>
+#include <QToolButton>
 
-#include <KisDocument.h>
-#include <KoColorProfile.h>
 #include <KisApplication.h>
-#include <KoFileDialog.h>
-#include <KisPart.h>
-#include <KoColorSpaceEngine.h>
+#include <KisDocument.h>
 #include <kis_icon.h>
-#include <KoConfig.h>
-#include "KoID.h"
+#include <KisPart.h>
+#include <KoColorProfile.h>
+#include <KoColorSpaceEngine.h>
 #include <KoConfigAuthorPage.h>
+#include <KoConfig.h>
+#include <KoFileDialog.h>
+#include "KoID.h"
 #include <KoVBox.h>
 
 #include <klocalizedstring.h>
 #include <kformat.h>
 #include <kundo2stack.h>
 #include <KoResourcePaths.h>
+
+#include <KisResourceCacheDb.h>
+#include <KisResourceLocator.h>
+
+#include "KisProofingConfiguration.h"
+#include "KoColorConversionTransformation.h"
 #include "kis_action_registry.h"
 #include <kis_image.h>
 #include <KisSqueezedComboBox.h>
@@ -68,14 +74,14 @@
 #include "widgets/kis_cmb_idlist.h"
 #include "KoColorSpace.h"
 #include "KoColorSpaceRegistry.h"
-#include "KoColorConversionTransformation.h"
-#include "kis_cursor.h"
-#include "kis_config.h"
 #include "kis_canvas_resource_provider.h"
-#include "kis_preference_set_registry.h"
 #include "kis_color_manager.h"
-#include "KisProofingConfiguration.h"
+#include "kis_config.h"
+#include "kis_cursor.h"
 #include "kis_image_config.h"
+#include "kis_preference_set_registry.h"
+
+#include "kis_file_name_requester.h"
 
 #include "slider_and_spin_box_sync.h"
 
@@ -213,6 +219,7 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 
     m_chkCompressKra->setChecked(cfg.compressKra());
     chkZip64->setChecked(cfg.useZip64());
+    m_chkTrimKra->setChecked(cfg.trimKra());
 
     m_backupFileCheckBox->setChecked(cfg.backupFile());
     cmbBackupFileLocation->setCurrentIndex(cfg.readEntry<int>("backupfilelocation", 0));
@@ -252,6 +259,17 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
     m_chkNativeFileDialog->setChecked(!group.readEntry("DontUseNativeFileDialog", dontUseNative));
 
     intMaxBrushSize->setValue(cfg.readEntry("maximumBrushSize", 1000));
+
+    //
+    // Resources
+    //
+    m_urlCacheDbLocation->setMode(KoFileDialog::OpenDirectory);
+    m_urlCacheDbLocation->setConfigurationName("cachedb_location");
+    m_urlCacheDbLocation->setFileName(cfg.readEntry<QString>(KisResourceCacheDb::dbLocationKey, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)));
+
+    m_urlResourceFolder->setMode(KoFileDialog::OpenDirectory);
+    m_urlResourceFolder->setConfigurationName("resource_directory");
+    m_urlResourceFolder->setFileName(cfg.readEntry<QString>(KisResourceLocator::resourceLocationKey, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)));
 }
 
 void GeneralTab::setDefault()
@@ -288,6 +306,7 @@ void GeneralTab::setDefault()
     m_backgroundimage->setText(cfg.getMDIBackgroundImage(true));
     m_chkCanvasMessages->setChecked(cfg.showCanvasMessages(true));
     m_chkCompressKra->setChecked(cfg.compressKra(true));
+    m_chkTrimKra->setChecked(cfg.trimKra(true));
     chkZip64->setChecked(cfg.useZip64(true));
     m_chkHiDPI->setChecked(false);
     m_chkSingleApplication->setChecked(true);
@@ -313,8 +332,8 @@ void GeneralTab::setDefault()
     cursorColor.fromQColor(cfg.getCursorMainColor(true));
     cursorColorBtutton->setColor(cursorColor);
 
-
-
+    m_urlCacheDbLocation->setFileName(cfg.readEntry<QString>(KisResourceCacheDb::dbLocationKey, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)));
+    m_urlResourceFolder->setFileName(cfg.readEntry<QString>(KisResourceLocator::resourceLocationKey, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)));
 }
 
 CursorStyle GeneralTab::cursorStyle()
@@ -376,6 +395,11 @@ bool GeneralTab::showCanvasMessages()
 bool GeneralTab::compressKra()
 {
     return m_chkCompressKra->isChecked();
+}
+
+bool GeneralTab::trimKra()
+{
+    return m_chkTrimKra->isChecked();
 }
 
 bool GeneralTab::useZip64()
@@ -1645,6 +1669,7 @@ bool KisDlgPreferences::editPreferences()
 
         cfg.setShowCanvasMessages(m_general->showCanvasMessages());
         cfg.setCompressKra(m_general->compressKra());
+        cfg.setTrimKra(m_general->trimKra());
         cfg.setUseZip64(m_general->useZip64());
 
         const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
@@ -1672,6 +1697,9 @@ bool KisDlgPreferences::editPreferences()
         cfg.setConvertToImageColorspaceOnImport(m_general->convertToImageColorspaceOnImport());
         cfg.setUndoStackLimit(m_general->undoStackSize());
         cfg.setFavoritePresets(m_general->favoritePresets());
+
+        cfg.writeEntry(KisResourceCacheDb::dbLocationKey, m_general->m_urlCacheDbLocation->fileName());
+        cfg.writeEntry(KisResourceLocator::resourceLocationKey, m_general->m_urlResourceFolder->fileName());
 
         // Color settings
         cfg.setUseSystemMonitorProfile(m_colorSettings->m_page->chkUseSystemMonitorProfile->isChecked());

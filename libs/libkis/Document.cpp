@@ -60,6 +60,7 @@
 #include <KoColorSpaceRegistry.h>
 #include <KoColorConversionTransformation.h>
 #include <KoDocumentInfo.h>
+#include <KisGlobalResourcesInterface.h>
 
 #include <InfoObject.h>
 #include <Node.h>
@@ -76,17 +77,22 @@
 struct Document::Private {
     Private() {}
     QPointer<KisDocument> document;
+    bool ownsDocument {false};
 };
 
-Document::Document(KisDocument *document, QObject *parent)
+Document::Document(KisDocument *document, bool ownsDocument, QObject *parent)
     : QObject(parent)
     , d(new Private)
 {
     d->document = document;
+    d->ownsDocument = ownsDocument;
 }
 
 Document::~Document()
 {
+    if (d->ownsDocument && d->document) {
+        KisPart::instance()->removeDocument(d->document);
+    }
     delete d;
 }
 
@@ -635,7 +641,7 @@ FillLayer *Document::createFillLayer(const QString &name, const QString generato
     KisGeneratorSP generator = KisGeneratorRegistry::instance()->value(generatorName);
     if (generator) {
 
-        KisFilterConfigurationSP config = generator->factoryConfiguration();
+        KisFilterConfigurationSP config = generator->factoryConfiguration(KisGlobalResourcesInterface::instance());
         Q_FOREACH(const QString property, configuration.properties().keys()) {
             config->setProperty(property, configuration.property(property));
         }
@@ -804,9 +810,9 @@ Document *Document::clone() const
 {
     if (!d->document) return 0;
     QPointer<KisDocument> clone = d->document->clone();
-    Document * d = new Document(clone);
-    clone->setParent(d); // It's owned by the document, not KisPart
-    return d;
+    Document * newDocument = new Document(clone, d->ownsDocument);
+    clone->setParent(newDocument); // It's owned by the document, not KisPart
+    return newDocument;
 }
 
 void Document::setHorizontalGuides(const QList<qreal> &lines)
@@ -872,6 +878,11 @@ QRect Document::bounds() const
 QPointer<KisDocument> Document::document() const
 {
     return d->document;
+}
+
+void Document::setOwnsDocument(bool ownsDocument)
+{
+    d->ownsDocument = ownsDocument;
 }
 
 /* Animation related function */

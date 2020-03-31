@@ -56,11 +56,11 @@ public:
     QRect getSpaceForCircle(QRect geom) override;
     QRect getSpaceForTriangle(QRect geom) override;
 protected:
-    virtual QImage renderBackground(const QVector4D &channelValues, quint32 pixelSize) const override;
+    QImage renderAlphaMask() const override;
 
 private:
     QPointF convertShapeCoordinateToWidgetCoordinate(QPointF coordinate) const override;
-    QPointF convertWidgetCoordinateToShapeCoordinate(QPoint coordinate) const override;
+    QPointF convertWidgetCoordinateToShapeCoordinate(QPointF coordinate) const override;
 
 
     singelDTypes m_type;

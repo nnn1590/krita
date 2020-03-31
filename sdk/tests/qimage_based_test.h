@@ -36,8 +36,6 @@
 #if USE_DOCUMENT
 #include "KisDocument.h"
 #include "kis_shape_layer.h"
-#else
-#include "kis_filter_configuration.h"
 #endif /* USE_DOCUMENT */
 
 #include "kis_undo_stores.h"
@@ -47,9 +45,11 @@
 #include "kis_adjustment_layer.h"
 #include "kis_transparency_mask.h"
 #include "kis_clone_layer.h"
+#include <KisGlobalResourcesInterface.h>
 
 #include "filter/kis_filter.h"
 #include "filter/kis_filter_registry.h"
+#include "kis_filter_configuration.h"
 
 #include "commands/kis_selection_commands.h"
 
@@ -88,10 +88,10 @@ protected:
 
         KisFilterSP filter = KisFilterRegistry::instance()->value("blur");
         Q_ASSERT(filter);
-        KisFilterConfigurationSP configuration = filter->defaultConfiguration();
+        KisFilterConfigurationSP configuration = filter->defaultConfiguration(KisGlobalResourcesInterface::instance());
         Q_ASSERT(configuration);
 
-        KisAdjustmentLayerSP blur1 = new KisAdjustmentLayer(image, "blur1", configuration, 0);
+        KisAdjustmentLayerSP blur1 = new KisAdjustmentLayer(image, "blur1", configuration->cloneWithResourcesSnapshot(), 0);
         blur1->internalSelection()->clear();
         blur1->internalSelection()->pixelSelection()->select(blurRect);
         blur1->setX(blurShift.x());

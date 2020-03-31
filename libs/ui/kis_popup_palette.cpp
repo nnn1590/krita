@@ -18,29 +18,33 @@
    Boston, MA 02110-1301, USA.
 
 */
+#include <QtGui>
+#include <QMenu>
+#include <QWhatsThis>
+#include <QVBoxLayout>
+#include <QElapsedTimer>
+
+#include <KisTagModel.h>
+#include <KisTagModelProvider.h>
 
 #include "kis_canvas2.h"
 #include "kis_config.h"
 #include "kis_popup_palette.h"
 #include "kis_favorite_resource_manager.h"
 #include "kis_icon_utils.h"
-#include "KisResourceServerProvider.h"
 #include <kis_canvas_resource_provider.h>
 #include <KoTriangleColorSelector.h>
 #include <KisVisualColorSelector.h>
 #include <kis_config_notifier.h>
-#include <QtGui>
-#include <QMenu>
-#include <QWhatsThis>
-#include <QVBoxLayout>
-#include <QElapsedTimer>
 #include "kis_signal_compressor.h"
 #include "brushhud/kis_brush_hud.h"
 #include "brushhud/kis_round_hud_button.h"
 #include "kis_signals_blocker.h"
 #include "kis_canvas_controller.h"
 #include "kis_acyclic_signal_connector.h"
+#include <kis_paintop_preset.h>
 #include "KisMouseClickEater.h"
+
 
 class PopupColorTriangle : public KoTriangleColorSelector
 {
@@ -116,15 +120,18 @@ KisPopupPalette::KisPopupPalette(KisViewManager* viewManager, KisCoordinatesConv
     const int borderWidth = 3;
 
     if (KisConfig(true).readEntry<bool>("popuppalette/usevisualcolorselector", false)) {
-        m_triangleColorSelector = new KisVisualColorSelector(this);
+        KisVisualColorSelector *selector = new KisVisualColorSelector(this);
+        selector->setAcceptTabletEvents(true);
+        m_triangleColorSelector = selector;
     }
     else {
         m_triangleColorSelector  = new PopupColorTriangle(displayRenderer, this);
+        connect(m_triangleColorSelector, SIGNAL(requestCloseContainer()), this, SLOT(slotHide()));
     }
     m_triangleColorSelector->setDisplayRenderer(displayRenderer);
     m_triangleColorSelector->setConfig(true,false);
     m_triangleColorSelector->move(m_popupPaletteSize/2-m_colorHistoryInnerRadius+borderWidth, m_popupPaletteSize/2-m_colorHistoryInnerRadius+borderWidth);
-    m_triangleColorSelector->resize(m_colorHistoryInnerRadius*2-borderWidth*2, m_colorHistoryInnerRadius*2-borderWidth*2);
+    m_triangleColorSelector->resize(m_popupPaletteSize - 2*m_triangleColorSelector->x(), m_popupPaletteSize - 2*m_triangleColorSelector->y());
     m_triangleColorSelector->setVisible(true);
     KoColor fgcolor(Qt::black, KoColorSpaceRegistry::instance()->rgb8());
     if (m_resourceManager) {
@@ -150,8 +157,6 @@ KisPopupPalette::KisPopupPalette(KisViewManager* viewManager, KisCoordinatesConv
             m_colorChangeCompressor.data(), SLOT(start()));
     connect(m_colorChangeCompressor.data(), SIGNAL(timeout()),
             SLOT(slotEmitColorChanged()));
-
-    connect(m_triangleColorSelector, SIGNAL(requestCloseContainer()), this, SLOT(slotHide()));
 
     connect(KisConfigNotifier::instance(), SIGNAL(configChanged()), m_triangleColorSelector, SLOT(configurationChanged()));
 
@@ -743,7 +748,7 @@ void KisPopupPalette::mouseMoveEvent(QMouseEvent *event)
             int pos = calculatePresetIndex(point, m_resourceManager->numFavoritePresets());
 
             if (pos >= 0 && pos < m_resourceManager->numFavoritePresets()) {
-                setToolTip(m_resourceManager->favoritePresetList().at(pos).data()->name());
+                setToolTip(m_resourceManager->favoritePresetNamesList().at(pos));
                 setHoveredPreset(pos);
             }
         }
@@ -797,9 +802,14 @@ void KisPopupPalette::mousePressEvent(QMouseEvent *event)
 
 void KisPopupPalette::slotShowTagsPopup()
 {
-    KisPaintOpPresetResourceServer *rServer = KisResourceServerProvider::instance()->paintOpPresetServer();
-    QStringList tags = rServer->tagNamesList();
-    std::sort(tags.begin(), tags.end());
+    KisTagModel *model = KisTagModelProvider::tagModel(ResourceType::PaintOpPresets);
+    QVector<QString> tags;
+    for (int i = 0; i < model->rowCount(); ++i) {
+        QModelIndex idx = model->index(i, 0);
+        tags << model->data(idx, Qt::DisplayRole).toString();
+    }
+
+    //std::sort(tags.begin(), tags.end());
 
     if (!tags.isEmpty()) {
         QMenu menu;
@@ -809,12 +819,20 @@ void KisPopupPalette::slotShowTagsPopup()
 
         QAction *action = menu.exec(QCursor::pos());
         if (action) {
-            m_resourceManager->setCurrentTag(action->text());
+
+            for (int i = 0; i < model->rowCount(); ++i) {
+                QModelIndex idx = model->index(i, 0);
+                if (model->data(idx, Qt::DisplayRole).toString() == action->text()) {
+                    m_resourceManager->setCurrentTag(model->tagForIndex(idx));
+                    break;
+                }
+            }
         }
     } else {
         QWhatsThis::showText(QCursor::pos(),
                              i18n("There are no tags available to show in this popup. To add presets, you need to tag them and then select the tag here."));
     }
+
 }
 
 void KisPopupPalette::slotZoomToOneHundredPercentClicked() {

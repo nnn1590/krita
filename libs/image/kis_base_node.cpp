@@ -111,9 +111,8 @@ KisBaseNode::KisBaseNode(const KisBaseNode & rhs)
                 KisScalarKeyframeChannel* pchannel = qobject_cast<KisScalarKeyframeChannel*>(channel);
                 KIS_ASSERT_RECOVER(pchannel) { continue; }
 
-                KisScalarKeyframeChannel* channelNew = new KisScalarKeyframeChannel(*pchannel, 0);
+                KisScalarKeyframeChannel* channelNew = new KisScalarKeyframeChannel(*pchannel, nullptr);
                 KIS_ASSERT(channelNew);
-
                 m_d->keyframeChannels.insert(channelNew->id(), channelNew);
 
                 if (KoID(key) == KisKeyframeChannel::Opacity) {
@@ -286,6 +285,26 @@ bool KisBaseNode::userLocked() const
     return m_d->properties.boolProperty(KisLayerPropertiesIcons::locked.id(), false);
 }
 
+bool KisBaseNode::belongsToIsolatedGroup() const
+{
+    if (!m_d->image) {
+        return false;
+    }
+
+    const KisBaseNode* isolatedRoot = m_d->image->isolatedModeRoot().data();
+    const KisBaseNode* element = this;
+
+    while (element) {
+        if (element == isolatedRoot) {
+            return true;
+        } else {
+            element = element->parentCallback().data();
+        }
+    }
+
+    return false;
+}
+
 void KisBaseNode::setUserLocked(bool locked)
 {
     const bool isLocked = m_d->properties.boolProperty(KisLayerPropertiesIcons::locked.id(), true);
@@ -299,7 +318,7 @@ bool KisBaseNode::isEditable(bool checkVisibility) const
 {
     bool editable = true;
     if (checkVisibility) {
-        editable = (visible(false) && !userLocked());
+        editable = ((visible(false) || belongsToIsolatedGroup()) && !userLocked());
     }
     else {
         editable = (!userLocked());
@@ -454,10 +473,11 @@ KisKeyframeChannel *KisBaseNode::requestKeyframeChannel(const QString &id)
         KisPaintDeviceSP device = original();
 
         if (device) {
+            KisNode* node = dynamic_cast<KisNode*>(this);
             KisScalarKeyframeChannel * channel = new KisScalarKeyframeChannel(
                 KisKeyframeChannel::Opacity,
                 0, 255,
-                device->defaultBounds(),
+                KisNodeWSP( node ),
                 KisKeyframe::Linear
             );
 
