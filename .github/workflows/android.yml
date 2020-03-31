@@ -2,7 +2,7 @@ name: Build Krita for Android
 
 on:
   push:
-    branches: [ master, github-actions ]
+    branches: [ master, github-actions, master2 ]
 
 jobs:
   build-armeabi-v7a:
