@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - run: git checkout HEAD^
     - name: Install dependencies
       run: |
@@ -145,6 +147,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - run: git checkout HEAD^
     - name: Install dependencies
       run: |
@@ -281,6 +285,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - run: git checkout HEAD^
     - name: Install dependencies
       run: |
@@ -417,6 +423,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - run: git checkout HEAD^
     - name: Install dependencies
       run: |
@@ -636,6 +644,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - run: git checkout HEAD^
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
