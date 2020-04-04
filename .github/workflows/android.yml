@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset -hard HEAD^
+    - run: git reset --hard HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -145,7 +145,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset -hard HEAD^
+    - run: git reset --hard HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -281,7 +281,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset -hard HEAD^
+    - run: git reset --hard HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -417,7 +417,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset -hard HEAD^
+    - run: git reset --hard HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -636,7 +636,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset -hard HEAD^
+    - run: git reset --hard HEAD^
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
       with:
