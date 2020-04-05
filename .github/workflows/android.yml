@@ -9,7 +9,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset --hard HEAD^
+      with:
+        fetch-depth: 2
+    - run: git checkout HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -28,11 +30,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        if [ "x${GITHUB_SHA}X" == "xX" ]; then
-          export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
-        else
-          export GIT_COMMIT_ID="${GITHUB_SHA}"
-        fi
+        export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -145,7 +143,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset --hard HEAD^
+      with:
+        fetch-depth: 2
+    - run: git checkout HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -164,11 +164,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        if [ "x${GITHUB_SHA}X" == "xX" ]; then
-          export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
-        else
-          export GIT_COMMIT_ID="${GITHUB_SHA}"
-        fi
+        export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -281,7 +277,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset --hard HEAD^
+      with:
+        fetch-depth: 2
+    - run: git checkout HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -300,11 +298,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        if [ "x${GITHUB_SHA}X" == "xX" ]; then
-          export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
-        else
-          export GIT_COMMIT_ID="${GITHUB_SHA}"
-        fi
+        export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -417,7 +411,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset --hard HEAD^
+      with:
+        fetch-depth: 2
+    - run: git checkout HEAD^
     - name: Install dependencies
       run: |
         sudo apt update
@@ -436,11 +432,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        if [ "x${GITHUB_SHA}X" == "xX" ]; then
-          export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
-        else
-          export GIT_COMMIT_ID="${GITHUB_SHA}"
-        fi
+        export GIT_COMMIT_ID="$(git rev-parse --verify HEAD)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -636,7 +628,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - run: git reset --hard HEAD^
+      with:
+        fetch-depth: 2
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
       with:
@@ -666,7 +659,7 @@ jobs:
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
         echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
-        git tag "${RELEASE_TAG_NAME}"
+        git tag "${RELEASE_TAG_NAME}" HEAD^
         git push origin "${RELEASE_TAG_NAME}"
         cat > Release-body.txt << 'EOF'
         It can run on Android 5.0 (API 21) Lollipop or later version.
