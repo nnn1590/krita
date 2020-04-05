@@ -630,7 +630,6 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 2
-    - run: git checkout HEAD^
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
       with:
@@ -660,7 +659,7 @@ jobs:
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
         echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
-        git tag "${RELEASE_TAG_NAME}"
+        git tag "${RELEASE_TAG_NAME}" HEAD^
         git push origin "${RELEASE_TAG_NAME}"
         cat > Release-body.txt << 'EOF'
         It can run on Android 5.0 (API 21) Lollipop or later version.
