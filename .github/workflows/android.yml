@@ -30,7 +30,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n2 | tail -n1)"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -164,7 +164,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n2 | tail -n1)"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -298,7 +298,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n2 | tail -n1)"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -432,7 +432,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n2 | tail -n1)"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
