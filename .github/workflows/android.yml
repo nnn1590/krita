@@ -659,7 +659,7 @@ jobs:
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
         echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
-        git tag "${RELEASE_TAG_NAME}" "(git log --format="%H" -n2 | tail -n1)"
+        git tag "${RELEASE_TAG_NAME}" "$(git log --format="%H" -n2 | tail -n1)"
         git push origin "${RELEASE_TAG_NAME}"
         cat > Release-body.txt << 'EOF'
         It can run on Android 5.0 (API 21) Lollipop or later version.
