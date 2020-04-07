@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 3
-    - run: git checkout HEAD^
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
     - name: Install dependencies
       run: |
         sudo apt update
@@ -145,7 +145,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 3
-    - run: git checkout HEAD^
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
     - name: Install dependencies
       run: |
         sudo apt update
@@ -279,7 +279,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 3
-    - run: git checkout HEAD^
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
     - name: Install dependencies
       run: |
         sudo apt update
@@ -413,7 +413,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 3
-    - run: git checkout HEAD^
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
     - name: Install dependencies
       run: |
         sudo apt update
