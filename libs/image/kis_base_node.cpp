@@ -42,7 +42,7 @@ struct Q_DECL_HIDDEN KisBaseNode::Private
     bool collapsed;
     bool supportsLodMoves;
     bool animated;
-    bool useInTimeline;
+    bool pinnedToTimeline;
     KisImageWSP image;
 
     Private(KisImageWSP image)
@@ -51,7 +51,7 @@ struct Q_DECL_HIDDEN KisBaseNode::Private
         , collapsed(false)
         , supportsLodMoves(false)
         , animated(false)
-        , useInTimeline(true)
+        , pinnedToTimeline(false)
         , image(image)
     {
     }
@@ -63,7 +63,7 @@ struct Q_DECL_HIDDEN KisBaseNode::Private
           collapsed(rhs.collapsed),
           supportsLodMoves(rhs.supportsLodMoves),
           animated(rhs.animated),
-          useInTimeline(rhs.useInTimeline),
+          pinnedToTimeline(rhs.pinnedToTimeline),
           image(rhs.image)
     {
         QMapIterator<QString, QVariant> iter = rhs.properties.propertyIterator();
@@ -420,6 +420,19 @@ KisKeyframeChannel * KisBaseNode::getKeyframeChannel(const QString &id) const
     return i.value();
 }
 
+bool KisBaseNode::isPinnedToTimeline() const
+{
+    return m_d->pinnedToTimeline;
+}
+
+void KisBaseNode::setPinnedToTimeline(bool pinned)
+{
+   if (pinned == m_d->pinnedToTimeline) return;
+
+   m_d->pinnedToTimeline = pinned;
+   baseNodeChangedCallback();
+}
+
 KisKeyframeChannel * KisBaseNode::getKeyframeChannel(const QString &id, bool create)
 {
     KisKeyframeChannel *channel = getKeyframeChannel(id);
@@ -443,19 +456,6 @@ bool KisBaseNode::isAnimated() const
 void KisBaseNode::enableAnimation()
 {
     m_d->animated = true;
-    baseNodeChangedCallback();
-}
-
-bool KisBaseNode::useInTimeline() const
-{
-    return m_d->useInTimeline;
-}
-
-void KisBaseNode::setUseInTimeline(bool value)
-{
-    if (value == m_d->useInTimeline) return;
-
-    m_d->useInTimeline = value;
     baseNodeChangedCallback();
 }
 
