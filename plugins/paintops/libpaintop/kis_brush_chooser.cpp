@@ -415,7 +415,8 @@ void KisPredefinedBrushChooser::updateBrushTip(KoResourceSP resource, bool isCha
 void KisPredefinedBrushChooser::slotUpdateBrushModeButtonsState()
 {
     KisColorfulBrush *colorfulBrush = dynamic_cast<KisColorfulBrush*>(m_brush.data());
-    const bool modeSwitchEnabled = colorfulBrush && colorfulBrush->hasColor();
+    const bool modeSwitchEnabled =
+        m_hslBrushTipEnabled && colorfulBrush && colorfulBrush->hasColor();
 
     if (modeSwitchEnabled) {
         if (colorfulBrush->useColorAsMask() && colorfulBrush->preserveLightness()) {
@@ -434,12 +435,12 @@ void KisPredefinedBrushChooser::slotUpdateBrushModeButtonsState()
             intContrastAdjustment->setValue(qRound(colorfulBrush->contrastAdjustment() * 100.0));
         }
 
-        btnMaskMode->setToolTip("Luminosity of the brush tip image is used as alpha channel for the stroke");
-        btnColorMode->setToolTip("The brush tip image is painted as it is");
-        btnLightnessMode->setToolTip("Luminosity of the brush tip image is used as lightness correction for the painting color. Alpha channel of the brush tip image is used as alpha for the final stroke");
-        intAdjustmentMidPoint->setToolTip("Luminosity value of the brush that will not change the painting color. All brush pixels darker than neutral point will paint with darker color, pixels lighter than neutral point — lighter.");
-        intBrightnessAdjustment->setToolTip("Brightness correction for the brush");
-        intContrastAdjustment->setToolTip("Contrast correction for the brush");
+        btnMaskMode->setToolTip(i18nc("@info:tooltip", "Luminosity of the brush tip image is used as alpha channel for the stroke"));
+        btnColorMode->setToolTip(i18nc("@info:tooltip", "The brush tip image is painted as it is"));
+        btnLightnessMode->setToolTip(i18nc("@info:tooltip", "Luminosity of the brush tip image is used as lightness correction for the painting color. Alpha channel of the brush tip image is used as alpha for the final stroke"));
+        intAdjustmentMidPoint->setToolTip(i18nc("@info:tooltip", "Luminosity value of the brush that will not change the painting color. All brush pixels darker than neutral point will paint with darker color, pixels lighter than neutral point — lighter."));
+        intBrightnessAdjustment->setToolTip(i18nc("@info:tooltip", "Brightness correction for the brush"));
+        intContrastAdjustment->setToolTip(i18nc("@info:tooltip", "Contrast correction for the brush"));
         grpBrushMode->setToolTip("");
     } else {
 
@@ -458,7 +459,12 @@ void KisPredefinedBrushChooser::slotUpdateBrushModeButtonsState()
         intAdjustmentMidPoint->setToolTip("");
         intBrightnessAdjustment->setToolTip("");
         intContrastAdjustment->setToolTip("");
-        grpBrushMode->setToolTip("The selected brush tip does not have color channels. The brush will work in \"Mask\" mode.");
+
+        if (m_hslBrushTipEnabled) {
+            grpBrushMode->setToolTip(i18nc("@info:tooltip", "The selected brush tip does not have color channels. The brush will work in \"Mask\" mode."));
+        } else {
+            grpBrushMode->setToolTip(i18nc("@info:tooltip", "The selected brush engine does not support \"Color\" or \"Lightness\" modes. The brush will work in \"Mask\" mode."));
+        }
     }
 
 
@@ -552,6 +558,16 @@ void KisPredefinedBrushChooser::setBrushSize(qreal xPixels, qreal yPixels)
 void KisPredefinedBrushChooser::setImage(KisImageWSP image)
 {
     m_image = image;
+}
+
+void KisPredefinedBrushChooser::setHSLBrusTipEnabled(bool value)
+{
+    m_hslBrushTipEnabled = value;
+}
+
+bool KisPredefinedBrushChooser::hslBrushTipEnabled() const
+{
+    return m_hslBrushTipEnabled;
 }
 
 void KisPredefinedBrushChooser::slotImportNewBrushResource() {

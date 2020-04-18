@@ -231,13 +231,10 @@ extern "C" int main(int argc, char **argv)
     const QString configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation);
     QSettings kritarc(configPath + QStringLiteral("/kritadisplayrc"), QSettings::IniFormat);
 
-    bool singleApplication = true;
     bool enableOpenGLDebug = false;
     bool openGLDebugSynchronous = false;
     bool logUsage = true;
     {
-
-        singleApplication = kritarc.value("EnableSingleApplication", true).toBool();
         if (kritarc.value("EnableHiDPI", true).toBool()) {
             QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
         }
@@ -455,14 +452,9 @@ extern "C" int main(int argc, char **argv)
     tryInitDrMingw();
 #endif
 
-    // If we should clear the config, it has to be done as soon as possible after
-    // KisApplication has been created. Otherwise the config file may have been read
-    // and stored in a KConfig object we have no control over.
-    app.askClearConfig();
-
     KisApplicationArguments args(app);
 
-    if (singleApplication && app.isRunning()) {
+    if (app.isRunning()) {
         // only pass arguments to main instance if they are not for batch processing
         // any batch processing would be done in this separate instance
         const bool batchRun = args.exportAs() || args.exportSequence();

@@ -602,7 +602,7 @@ void KisImage::setGlobalSelection(KisSelectionSP globalSelection)
     }
     else {
         if (!selectionMask) {
-            selectionMask = new KisSelectionMask(this);
+            selectionMask = new KisSelectionMask(this, i18n("Selection Mask"));
             selectionMask->initSelection(m_d->rootLayer);
             addNode(selectionMask);
             // If we do not set the selection now, the setActive call coming next
@@ -794,6 +794,13 @@ void KisImage::cropImage(const QRect& newRect)
 
 void KisImage::purgeUnusedData(bool isCancellable)
 {
+    /**
+     * WARNING: don't use this function unless you know what you are doing!
+     *
+     * It breaks undo on layers! Therefore, after calling it, KisImage is not
+     * undo-capable anymore!
+     */
+
     struct PurgeUnusedDataStroke : public KisRunnableBasedStrokeStrategy {
         PurgeUnusedDataStroke(KisImageSP image, bool isCancellable)
             : KisRunnableBasedStrokeStrategy(QLatin1String("purge-unused-data"),
