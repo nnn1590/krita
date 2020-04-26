@@ -9,8 +9,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 3
-    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+        fetch-depth: 48
+    - run: git checkout 7183b4ae5118976f223549d882b489ed08ad5902
     - name: Install dependencies
       run: |
         sudo apt update
@@ -29,7 +29,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export GIT_COMMIT_ID="7183b4ae5118976f223549d882b489ed08ad5902"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -143,8 +143,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 3
-    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+        fetch-depth: 48
+    - run: git checkout 7183b4ae5118976f223549d882b489ed08ad5902
     - name: Install dependencies
       run: |
         sudo apt update
@@ -163,7 +163,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export GIT_COMMIT_ID="7183b4ae5118976f223549d882b489ed08ad5902"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -277,8 +277,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 3
-    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+        fetch-depth: 48
+    - run: git checkout 7183b4ae5118976f223549d882b489ed08ad5902
     - name: Install dependencies
       run: |
         sudo apt update
@@ -297,7 +297,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export GIT_COMMIT_ID="7183b4ae5118976f223549d882b489ed08ad5902"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -411,8 +411,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 3
-    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+        fetch-depth: 48
+    - run: git checkout 7183b4ae5118976f223549d882b489ed08ad5902
     - name: Install dependencies
       run: |
         sudo apt update
@@ -431,7 +431,7 @@ jobs:
         export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
         export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
         export SCRIPT_EXIT_CODE="0"
-        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export GIT_COMMIT_ID="7183b4ae5118976f223549d882b489ed08ad5902"
         export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
         EOF
         mkdir "${HOME}/files"
@@ -628,7 +628,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 3
+        fetch-depth: 48
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
       with:
@@ -639,6 +639,8 @@ jobs:
         name: krita-build-type
     - name: Setup variables
       id: setup_vars
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       run: |
         if [ "$(cat krita-build-type/Krita-build-type)" = "Debug" ]; then
           echo "::set-output name=KRITA_BUILD_TYPE::Debug"
@@ -658,8 +660,8 @@ jobs:
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
         echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
-        git tag "${RELEASE_TAG_NAME}" "$(git log --format="%H" -n2 | tail -n1)"
-        git push origin "${RELEASE_TAG_NAME}"
+        curl -sSH "Authorization: token ${GITHUB_TOKEN}" -d '{"tag":"${RELEASE_TAG_NAME}","message":"","object":"7183b4ae5118976f223549d882b489ed08ad5902","type":"commit"}' 'https://api.github.com/repos/nnn1590/krita/git/tags' -o /dev/null
+        curl -sSH "Authorization: token ${GITHUB_TOKEN}" -d '{"ref":"refs/tags/${RELEASE_TAG_NAME}","sha":"7183b4ae5118976f223549d882b489ed08ad5902"}' 'https://api.github.com/repos/nnn1590/krita/git/refs' -o /dev/null
         cat > Release-body.txt << 'EOF'
         It can run on Android 5.0 (API 21) Lollipop or later version.
         Built with:
