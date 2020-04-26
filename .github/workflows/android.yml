@@ -660,8 +660,8 @@ jobs:
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
         echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
-        curl -sSH "Authorization: token ${GITHUB_TOKEN}" -d '{"tag":"${RELEASE_TAG_NAME}","message":"","object":"7183b4ae5118976f223549d882b489ed08ad5902","type":"commit"}' 'https://api.github.com/repos/nnn1590/krita/git/tags' -o /dev/null
-        curl -sSH "Authorization: token ${GITHUB_TOKEN}" -d '{"ref":"refs/tags/${RELEASE_TAG_NAME}","sha":"7183b4ae5118976f223549d882b489ed08ad5902"}' 'https://api.github.com/repos/nnn1590/krita/git/refs' -o /dev/null
+        curl -sSH "Authorization: token ${GITHUB_TOKEN}" -d '{"tag":"'"${RELEASE_TAG_NAME}"'","message":"","object":"7183b4ae5118976f223549d882b489ed08ad5902","type":"commit"}' 'https://api.github.com/repos/nnn1590/krita/git/tags' -o /dev/null
+        curl -sSH "Authorization: token ${GITHUB_TOKEN}" -d '{"ref":"refs/tags/'"${RELEASE_TAG_NAME}"'","sha":"7183b4ae5118976f223549d882b489ed08ad5902"}' 'https://api.github.com/repos/nnn1590/krita/git/refs' -o /dev/null
         cat > Release-body.txt << 'EOF'
         It can run on Android 5.0 (API 21) Lollipop or later version.
         Built with:
