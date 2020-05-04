@@ -1,0 +1,735 @@
+name: Build Krita for Android
+
+on:
+  push
+
+jobs:
+  build-armeabi-v7a:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 3
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
+    - name: Generate envsetup.sh and mkdir ~/files
+      run: |
+        cat > envsetup.sh << 'EOF'
+        export ANDROID_HOME="${HOME}/android-sdk"
+        export ANDROID_SDK_ROOT="${ANDROID_HOME}"
+        export ANDROID_NDK_HOME="${HOME}/android-ndk-r18b"
+        export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
+        export ANDROID_NDK="${ANDROID_NDK_HOME}"
+        export KRITA_SRC="${PWD}"
+        export KRITA_BUILD_TYPE="Release"
+        export KRITA_BUILD_ARCHITECTURE="armeabi-v7a"
+        export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+        export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
+        export SCRIPT_EXIT_CODE="0"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        EOF
+        mkdir "${HOME}/files"
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Setup Android SDK and NDK
+      run: |
+        . envsetup.sh
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        . envsetup.sh
+        cd packaging/android
+        declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
+        if [ ! "x$(command -v wget)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(wget --spider --quiet -S "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2" 2>&1 | grep "HTTP/" | awk '{print $2}')"
+        elif [ ! "x$(command -v curl)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(curl -o /dev/null --silent --head --write-out '%{http_code}' "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2")"
+        else
+          echo -e "\e[1;31m<Error>\e[m Wget and cURL are not found"
+          exit 1
+        fi
+        if [ "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x4X" -o "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x5X" ]; then
+          echo -e "\e[1;33m<Warning>\e[m Boost on Bintray is currently not available for download, so use the Wayback Machine instead (if available)."
+          sed -i -e '/git clone https:\/\/github\.com\/moritz-wundke\/Boost-for-Android \$DOWNLOADS_DIR\/boost$/a\         sed -i -e '"'"'s#BOOST_DOWNLOAD_LINK="http://dl.bintray.com/boostorg/release#BOOST_DOWNLOAD_LINK="http://web.archive.org/web/0/http://dl.bintray.com/boostorg/release#'"'"' $DOWNLOADS_DIR/boost/build-android.sh' androidbuild.sh
+        fi
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}" && (
+          echo -e "\e[1;32mBuild Successful\e[m"
+        ) || (
+          SCRIPT_EXIT_CODE=${?}
+          echo -e "\e[1;31mBuild Failed(${SCRIPT_EXIT_CODE})\e[m"
+          exit ${SCRIPT_EXIT_CODE}
+        )
+    - name: Output log(s)
+      if: always()
+      run: . envsetup.sh && find ${KRITA_BUILD_WORKSPACE}/kf5/kde/src/log -type f -print0  | xargs -0 more | cat
+    - name: Align and sign the APK
+      id: align_and_sign_apk
+      if: success()
+      env:
+        KRITA_BUILD_APK_SIGN_STORE_FILE: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_FILE }}
+        KRITA_BUILD_APK_SIGN_STORE_ALIAS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_ALIAS }}
+        KRITA_BUILD_APK_SIGN_STORE_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_PASS }}
+        KRITA_BUILD_APK_SIGN_KEY_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_KEY_PASS }}
+      run: |
+        . envsetup.sh
+        echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
+          zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
+            echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
+            mv "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk"
+          ) || (
+            echo -en "\e[1;34m<Info>\e[m APK is not aligned; aligning..."
+            zipalign 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk" && (
+              echo -e "\e[1;32mSuccessful\e[m"
+            ) || (
+              SCRIPT_EXIT_CODE=${?}
+              echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+              exit ${SCRIPT_EXIT_CODE}
+            )
+            rm "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"
+          )
+          echo -en "\e[1;34m<Info>\e[m Signing APK..."
+          apksigner sign --ks "${KRITA_BUILD_APK_SIGN_STORE_PATH}" --ks-key-alias "${KRITA_BUILD_APK_SIGN_STORE_ALIAS}" --ks-pass env:KRITA_BUILD_APK_SIGN_STORE_PASS --key-pass env:KRITA_BUILD_APK_SIGN_KEY_PASS --out "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+          echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
+          apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
+            echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+        else
+          echo -e "\e[1;31m<Error>\e[m APK "'"'"${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"'"'" is not found"
+          exit 1
+        fi
+    - name: Upload the APK to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-apk
+        path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
+  build-arm64-v8a:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 3
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
+    - name: Generate envsetup.sh and mkdir ~/files
+      run: |
+        cat > envsetup.sh << 'EOF'
+        export ANDROID_HOME="${HOME}/android-sdk"
+        export ANDROID_SDK_ROOT="${ANDROID_HOME}"
+        export ANDROID_NDK_HOME="${HOME}/android-ndk-r18b"
+        export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
+        export ANDROID_NDK="${ANDROID_NDK_HOME}"
+        export KRITA_SRC="${PWD}"
+        export KRITA_BUILD_TYPE="Release"
+        export KRITA_BUILD_ARCHITECTURE="arm64-v8a"
+        export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+        export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
+        export SCRIPT_EXIT_CODE="0"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        EOF
+        mkdir "${HOME}/files"
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Setup Android SDK and NDK
+      run: |
+        . envsetup.sh
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        . envsetup.sh
+        cd packaging/android
+        declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
+        if [ ! "x$(command -v wget)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(wget --spider --quiet -S "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2" 2>&1 | grep "HTTP/" | awk '{print $2}')"
+        elif [ ! "x$(command -v curl)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(curl -o /dev/null --silent --head --write-out '%{http_code}' "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2")"
+        else
+          echo -e "\e[1;31m<Error>\e[m Wget and cURL are not found"
+          exit 1
+        fi
+        if [ "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x4X" -o "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x5X" ]; then
+          echo -e "\e[1;33m<Warning>\e[m Boost on Bintray is currently not available for download, so use the Wayback Machine instead (if available)."
+          sed -i -e '/git clone https:\/\/github\.com\/moritz-wundke\/Boost-for-Android \$DOWNLOADS_DIR\/boost$/a\         sed -i -e '"'"'s#BOOST_DOWNLOAD_LINK="http://dl.bintray.com/boostorg/release#BOOST_DOWNLOAD_LINK="http://web.archive.org/web/0/http://dl.bintray.com/boostorg/release#'"'"' $DOWNLOADS_DIR/boost/build-android.sh' androidbuild.sh
+        fi
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}" && (
+          echo -e "\e[1;32mBuild Successful\e[m"
+        ) || (
+          SCRIPT_EXIT_CODE=${?}
+          echo -e "\e[1;31mBuild Failed(${SCRIPT_EXIT_CODE})\e[m"
+          exit ${SCRIPT_EXIT_CODE}
+        )
+    - name: Output log(s)
+      if: always()
+      run: . envsetup.sh && find ${KRITA_BUILD_WORKSPACE}/kf5/kde/src/log -type f -print0  | xargs -0 more | cat
+    - name: Align and sign the APK
+      id: align_and_sign_apk
+      if: success()
+      env:
+        KRITA_BUILD_APK_SIGN_STORE_FILE: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_FILE }}
+        KRITA_BUILD_APK_SIGN_STORE_ALIAS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_ALIAS }}
+        KRITA_BUILD_APK_SIGN_STORE_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_PASS }}
+        KRITA_BUILD_APK_SIGN_KEY_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_KEY_PASS }}
+      run: |
+        . envsetup.sh
+        echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
+          zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
+            echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
+            mv "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk"
+          ) || (
+            echo -en "\e[1;34m<Info>\e[m APK is not aligned; aligning..."
+            zipalign 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk" && (
+              echo -e "\e[1;32mSuccessful\e[m"
+            ) || (
+              SCRIPT_EXIT_CODE=${?}
+              echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+              exit ${SCRIPT_EXIT_CODE}
+            )
+            rm "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"
+          )
+          echo -en "\e[1;34m<Info>\e[m Signing APK..."
+          apksigner sign --ks "${KRITA_BUILD_APK_SIGN_STORE_PATH}" --ks-key-alias "${KRITA_BUILD_APK_SIGN_STORE_ALIAS}" --ks-pass env:KRITA_BUILD_APK_SIGN_STORE_PASS --key-pass env:KRITA_BUILD_APK_SIGN_KEY_PASS --out "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+          echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
+          apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
+            echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+        else
+          echo -e "\e[1;31m<Error>\e[m APK "'"'"${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"'"'" is not found"
+          exit 1
+        fi
+    - name: Upload the APK to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-apk
+        path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
+  build-x86:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 3
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
+    - name: Generate envsetup.sh and mkdir ~/files
+      run: |
+        cat > envsetup.sh << 'EOF'
+        export ANDROID_HOME="${HOME}/android-sdk"
+        export ANDROID_SDK_ROOT="${ANDROID_HOME}"
+        export ANDROID_NDK_HOME="${HOME}/android-ndk-r18b"
+        export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
+        export ANDROID_NDK="${ANDROID_NDK_HOME}"
+        export KRITA_SRC="${PWD}"
+        export KRITA_BUILD_TYPE="Release"
+        export KRITA_BUILD_ARCHITECTURE="x86"
+        export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+        export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
+        export SCRIPT_EXIT_CODE="0"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        EOF
+        mkdir "${HOME}/files"
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Setup Android SDK and NDK
+      run: |
+        . envsetup.sh
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        . envsetup.sh
+        cd packaging/android
+        declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
+        if [ ! "x$(command -v wget)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(wget --spider --quiet -S "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2" 2>&1 | grep "HTTP/" | awk '{print $2}')"
+        elif [ ! "x$(command -v curl)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(curl -o /dev/null --silent --head --write-out '%{http_code}' "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2")"
+        else
+          echo -e "\e[1;31m<Error>\e[m Wget and cURL are not found"
+          exit 1
+        fi
+        if [ "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x4X" -o "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x5X" ]; then
+          echo -e "\e[1;33m<Warning>\e[m Boost on Bintray is currently not available for download, so use the Wayback Machine instead (if available)."
+          sed -i -e '/git clone https:\/\/github\.com\/moritz-wundke\/Boost-for-Android \$DOWNLOADS_DIR\/boost$/a\         sed -i -e '"'"'s#BOOST_DOWNLOAD_LINK="http://dl.bintray.com/boostorg/release#BOOST_DOWNLOAD_LINK="http://web.archive.org/web/0/http://dl.bintray.com/boostorg/release#'"'"' $DOWNLOADS_DIR/boost/build-android.sh' androidbuild.sh
+        fi
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}" && (
+          echo -e "\e[1;32mBuild Successful\e[m"
+        ) || (
+          SCRIPT_EXIT_CODE=${?}
+          echo -e "\e[1;31mBuild Failed(${SCRIPT_EXIT_CODE})\e[m"
+          exit ${SCRIPT_EXIT_CODE}
+        )
+    - name: Output log(s)
+      if: always()
+      run: . envsetup.sh && find ${KRITA_BUILD_WORKSPACE}/kf5/kde/src/log -type f -print0  | xargs -0 more | cat
+    - name: Align and sign the APK
+      id: align_and_sign_apk
+      if: success()
+      env:
+        KRITA_BUILD_APK_SIGN_STORE_FILE: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_FILE }}
+        KRITA_BUILD_APK_SIGN_STORE_ALIAS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_ALIAS }}
+        KRITA_BUILD_APK_SIGN_STORE_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_PASS }}
+        KRITA_BUILD_APK_SIGN_KEY_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_KEY_PASS }}
+      run: |
+        . envsetup.sh
+        echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
+          zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
+            echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
+            mv "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk"
+          ) || (
+            echo -en "\e[1;34m<Info>\e[m APK is not aligned; aligning..."
+            zipalign 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk" && (
+              echo -e "\e[1;32mSuccessful\e[m"
+            ) || (
+              SCRIPT_EXIT_CODE=${?}
+              echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+              exit ${SCRIPT_EXIT_CODE}
+            )
+            rm "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"
+          )
+          echo -en "\e[1;34m<Info>\e[m Signing APK..."
+          apksigner sign --ks "${KRITA_BUILD_APK_SIGN_STORE_PATH}" --ks-key-alias "${KRITA_BUILD_APK_SIGN_STORE_ALIAS}" --ks-pass env:KRITA_BUILD_APK_SIGN_STORE_PASS --key-pass env:KRITA_BUILD_APK_SIGN_KEY_PASS --out "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+          echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
+          apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
+            echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+        else
+          echo -e "\e[1;31m<Error>\e[m APK "'"'"${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"'"'" is not found"
+          exit 1
+        fi
+    - name: Upload the APK to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-apk
+        path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
+  build-x86_64:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 3
+    - run: git checkout "$(git log --format="%H" -n2 | tail -n1)"
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
+    - name: Generate envsetup.sh and mkdir ~/files
+      run: |
+        cat > envsetup.sh << 'EOF'
+        export ANDROID_HOME="${HOME}/android-sdk"
+        export ANDROID_SDK_ROOT="${ANDROID_HOME}"
+        export ANDROID_NDK_HOME="${HOME}/android-ndk-r18b"
+        export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
+        export ANDROID_NDK="${ANDROID_NDK_HOME}"
+        export KRITA_SRC="${PWD}"
+        export KRITA_BUILD_TYPE="Release"
+        export KRITA_BUILD_ARCHITECTURE="x86_64"
+        export KRITA_BUILD_WORKSPACE="${HOME}/workspace/build-krita-android-${KRITA_BUILD_ARCHITECTURE}-${KRITA_BUILD_TYPE}"
+        export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/files/sign.jks"
+        export SCRIPT_EXIT_CODE="0"
+        export GIT_COMMIT_ID="$(git log --format="%H" -n1)"
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        EOF
+        mkdir "${HOME}/files"
+    - name: Delete large unneeded files
+      run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Setup Android SDK and NDK
+      run: |
+        . envsetup.sh
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "platform-tools" "build-tools;28.0.3" "platforms;android-21" "platforms;android-28"
+        wget https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip
+        unzip -q android-ndk-r18b-linux-x86_64.zip -d "${HOME}"
+        rm android-ndk-r18b-linux-x86_64.zip
+    - name: Build Krita
+      run: |
+        . envsetup.sh
+        cd packaging/android
+        declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
+        if [ ! "x$(command -v wget)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(wget --spider --quiet -S "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2" 2>&1 | grep "HTTP/" | awk '{print $2}')"
+        elif [ ! "x$(command -v curl)X" == "xX" ]; then
+          declare BINTRAY_BOOST_HTTP_STATUS="$(curl -o /dev/null --silent --head --write-out '%{http_code}' "http://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo "${BOOST_VERSION}" | sed -e 's/\./_/g').tar.bz2")"
+        else
+          echo -e "\e[1;31m<Error>\e[m Wget and cURL are not found"
+          exit 1
+        fi
+        if [ "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x4X" -o "x${BINTRAY_BOOST_HTTP_STATUS:0:1}X" == "x5X" ]; then
+          echo -e "\e[1;33m<Warning>\e[m Boost on Bintray is currently not available for download, so use the Wayback Machine instead (if available)."
+          sed -i -e '/git clone https:\/\/github\.com\/moritz-wundke\/Boost-for-Android \$DOWNLOADS_DIR\/boost$/a\         sed -i -e '"'"'s#BOOST_DOWNLOAD_LINK="http://dl.bintray.com/boostorg/release#BOOST_DOWNLOAD_LINK="http://web.archive.org/web/0/http://dl.bintray.com/boostorg/release#'"'"' $DOWNLOADS_DIR/boost/build-android.sh' androidbuild.sh
+        fi
+        ./androidbuild.sh\
+         -p=all\
+         --src="${KRITA_SRC}"\
+         --build-type="${KRITA_BUILD_TYPE}"\
+         --build-root="${KRITA_BUILD_WORKSPACE}"\
+         --ndk-path="${ANDROID_NDK_HOME}"\
+         --sdk-path="${ANDROID_HOME}"\
+         --api-level=21\
+         --android-abi="${KRITA_BUILD_ARCHITECTURE}" && (
+          echo -e "\e[1;32mBuild Successful\e[m"
+        ) || (
+          SCRIPT_EXIT_CODE=${?}
+          echo -e "\e[1;31mBuild Failed(${SCRIPT_EXIT_CODE})\e[m"
+          exit ${SCRIPT_EXIT_CODE}
+        )
+    - name: Output log(s)
+      if: always()
+      run: . envsetup.sh && find ${KRITA_BUILD_WORKSPACE}/kf5/kde/src/log -type f -print0  | xargs -0 more | cat
+    - name: Align and sign the APK
+      id: align_and_sign_apk
+      if: success()
+      env:
+        KRITA_BUILD_APK_SIGN_STORE_FILE: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_FILE }}
+        KRITA_BUILD_APK_SIGN_STORE_ALIAS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_ALIAS }}
+        KRITA_BUILD_APK_SIGN_STORE_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_PASS }}
+        KRITA_BUILD_APK_SIGN_KEY_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_KEY_PASS }}
+      run: |
+        . envsetup.sh
+        echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
+          zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
+            echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
+            mv "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk"
+          ) || (
+            echo -en "\e[1;34m<Info>\e[m APK is not aligned; aligning..."
+            zipalign 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned"{,-aligned}".apk" && (
+              echo -e "\e[1;32mSuccessful\e[m"
+            ) || (
+              SCRIPT_EXIT_CODE=${?}
+              echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+              exit ${SCRIPT_EXIT_CODE}
+            )
+            rm "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"
+          )
+          echo -en "\e[1;34m<Info>\e[m Signing APK..."
+          apksigner sign --ks "${KRITA_BUILD_APK_SIGN_STORE_PATH}" --ks-key-alias "${KRITA_BUILD_APK_SIGN_STORE_ALIAS}" --ks-pass env:KRITA_BUILD_APK_SIGN_STORE_PASS --key-pass env:KRITA_BUILD_APK_SIGN_KEY_PASS --out "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+          echo -en "\e[1;34m<Info>\e[m Verifying signed APK..."
+          apksigner verify "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" && (
+            echo -e "\e[1;32mSuccessful\e[m"
+            declare KRITA_BUILD_APK_PATH="${HOME}/files/krita-${KRITA_BUILD_TYPE,,}-v$(grep -F "set(KRITA_VERSION_STRING" ${KRITA_SRC}/CMakeLists.txt | sed -e 's/^.* "//g' -e 's/")$//g')-git${GIT_COMMIT_ID:0:7}-${KRITA_BUILD_ARCHITECTURE}.apk"
+            mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-signed-aligned.apk" "${KRITA_BUILD_APK_PATH}"
+            echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
+          ) || (
+            SCRIPT_EXIT_CODE=${?}
+            echo -e "\e[1;31mFailed(${SCRIPT_EXIT_CODE})\e[m"
+            exit ${SCRIPT_EXIT_CODE}
+          )
+        else
+          echo -e "\e[1;31m<Error>\e[m APK "'"'"${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk"'"'" is not found"
+          exit 1
+        fi
+    - name: Upload the APK to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-apk
+        path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
+  build-all:
+    needs: [build-armeabi-v7a, build-arm64-v8a, build-x86, build-x86_64]
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Download APKs from GitHub artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: krita-apk
+    - name: Install OpenJDK 8 JRE
+      run: |
+        sudo apt update
+        sudo apt install openjdk-8-jre
+    - name: Setup Apktool
+      run: |
+        mkdir -p ${HOME}/bin
+        export PATH="${HOME}/bin:${PATH}"
+        wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -P "${HOME}/bin"
+        wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.4.1.jar -O "${HOME}/bin/apktool.jar"
+        chmod +x "${HOME}/bin/apktool"{,.jar}
+    - name: Setup Android SDK
+      run: |
+        export ANDROID_HOME="${HOME}/android-sdk"
+        wget https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip -O android-sdk-linux.zip
+        unzip -q android-sdk-linux.zip -d "${ANDROID_HOME}"
+        rm android-sdk-linux.zip
+        export PATH="${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        mkdir -p "${HOME}/.android"
+        touch "${HOME}/.android/repositories.cfg"
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" --licenses
+        yes | sdkmanager --sdk_root="${ANDROID_HOME}" "tools" "build-tools;28.0.3"
+    - name: Merge APKs/lib to a APK
+      id: merge_lib_apk
+      env:
+        KRITA_BUILD_APK_SIGN_STORE_FILE: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_FILE }}
+        KRITA_BUILD_APK_SIGN_STORE_ALIAS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_ALIAS }}
+        KRITA_BUILD_APK_SIGN_STORE_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_STORE_PASS }}
+        KRITA_BUILD_APK_SIGN_KEY_PASS: ${{ secrets.KRITA_BUILD_APK_SIGN_KEY_PASS }}
+      run: |
+        export KRITA_BUILD_APK_SIGN_STORE_PATH="${HOME}/sign.jks"
+        echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        export PATH="${HOME}/bin:${ANDROID_HOME}/tools:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/build-tools/28.0.3:${PATH}"
+        if [ ! "x$(find krita-apk -name 'krita-debug-*')X" == "xX" -a ! "x$(find krita-apk -name 'krita-release-*')X" == "xX" ]; then
+          echo -e "\e[1;31m<Error>\e[m Debug APK(s) and Release APK(s) are mixed"
+          exit 1
+        fi
+        if [ "x$(find krita-apk -name 'krita-debug-*')X" == "xX" -a "x$(find krita-apk -name 'krita-release-*')X" == "xX" ]; then
+          echo -e "\e[1;31m<Error>\e[m APK(s) not found"
+          exit 1
+        fi
+        if [ "x$(find krita-apk -name 'krita-release-*')X" == "xX" ]; then
+          export KRITA_BUILD_TYPE="Debug"
+        else
+          export KRITA_BUILD_TYPE="Release"
+        fi
+        mkdir build && cd ${_}
+        find ../krita-apk/* -print0 | xargs -0L1 apktool d --no-{res,src}
+        declare APK_NAME_PREFIX="$(find ../krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
+        cp -a "${APK_NAME_PREFIX}armeabi-v7a" "${APK_NAME_PREFIX}all"
+        sed -i -e 's#armeabi\-v7a#all#g' "${APK_NAME_PREFIX}all/apktool.yml"
+        cp -a "${APK_NAME_PREFIX}"{arm64-v8a,x86,x86_64}"/lib/"* "${APK_NAME_PREFIX}all/lib"
+        apktool b "${APK_NAME_PREFIX}all"
+        zipalign 4 "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all"{,-aligned}".apk"
+        rm "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
+        mv -v "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all"{-aligned,}".apk"
+        apksigner sign --ks "${KRITA_BUILD_APK_SIGN_STORE_PATH}" --ks-key-alias "${KRITA_BUILD_APK_SIGN_STORE_ALIAS}" --ks-pass env:KRITA_BUILD_APK_SIGN_STORE_PASS --key-pass env:KRITA_BUILD_APK_SIGN_KEY_PASS "${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
+        declare KRITA_BUILD_APK_PATH="${PWD}/${APK_NAME_PREFIX}all/dist/${APK_NAME_PREFIX}all.apk"
+        echo "::set-output name=KRITA_BUILD_APK_PATH::${KRITA_BUILD_APK_PATH}"
+        export KRITA_BUILD_TYPE_INFO_PATH="${PWD}/Krita-build-type"
+        echo "${KRITA_BUILD_TYPE}" > "${KRITA_BUILD_TYPE_INFO_PATH}"
+        echo "::set-output name=KRITA_BUILD_TYPE_INFO_PATH::${KRITA_BUILD_TYPE_INFO_PATH}"
+    - name: Upload the APK to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-apk
+        path: ${{ steps.merge_lib_apk.outputs.KRITA_BUILD_APK_PATH }}
+    - name: Upload Krita build type info to GitHub artifacts
+      if: success()
+      uses: actions/upload-artifact@v1
+      with:
+        name: krita-build-type
+        path: ${{ steps.merge_lib_apk.outputs.KRITA_BUILD_TYPE_INFO_PATH }}
+  release:
+    needs: [build-armeabi-v7a, build-arm64-v8a, build-x86, build-x86_64, build-all]
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 3
+    - name: Download APKs from GitHub artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: krita-apk
+    - name: Download Krita build type info from GitHub artifacts
+      uses: actions/download-artifact@v1
+      with:
+        name: krita-build-type
+    - name: Setup variables
+      id: setup_vars
+      run: |
+        if [ "$(cat krita-build-type/Krita-build-type)" = "Debug" ]; then
+          echo "::set-output name=KRITA_BUILD_TYPE::Debug"
+          echo "\e[1;34m<Info>\e[m Debug build; skip publish release."
+          exit 0
+        else
+          echo "::set-output name=KRITA_BUILD_TYPE::Release"
+        fi
+        declare APK_NAME_PREFIX="$(find krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
+        declare RELEASE_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
+        declare RELEASE_TAG_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#git##g')"
+        declare RELEASE_IS_PRERELEASE="false"
+        if [[ "${APK_NAME_PREFIX}" == *"prealpha"* ]]; then
+          RELEASE_IS_PRERELEASE="true"
+        fi
+        echo "::set-output name=APK_NAME_PREFIX::${APK_NAME_PREFIX}"
+        echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
+        echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
+        echo "::set-output name=RELEASE_IS_PRERELEASE::${RELEASE_IS_PRERELEASE}"
+        git tag "${RELEASE_TAG_NAME}" "$(git log --format="%H" -n2 | tail -n1)"
+        git push origin "${RELEASE_TAG_NAME}"
+        cat > Release-body.txt << 'EOF'
+        It can run on Android 5.0 (API 21) Lollipop or later version.
+        Built with:
+        - The latest Android SDK
+        - Android NDK r18b
+        - Ubuntu 18.04 (amd64)
+        
+        `krita-*-all.apk` is a simple merge of `lib/` directories from all architectures, so I don't know if it works.
+        
+        <details>
+        <summary>APK signature info</summary>
+        
+        ```console
+        $ keytool -printcert -jarfile krita.apk
+        Signature:
+        
+        Owner: CN=NNN1590, C=jp
+        Issuer: CN=NNN1590, C=jp
+        Serial number: 455d4630
+        Valid from: Mon Mar 19 14:57:30 JST 2018 until: Fri Mar 13 14:57:30 JST 2043
+        Certificate fingerprints:
+        	 SHA1: 96:D8:52:65:11:C4:56:52:86:DB:3F:1A:E2:8D:0A:D2:5F:72:CE:8A
+        	 SHA256: 70:72:83:7A:19:29:F4:76:59:11:84:D6:2D:8F:A8:59:AB:A1:C3:CF:8D:1C:35:D2:6E:F0:B4:33:A0:DD:D1:90
+        Signature algorithm name: SHA256withRSA
+        Subject Public Key Algorithm: 2048-bit RSA key
+        Version: 3
+        
+        Extensions: 
+        
+        #1: ObjectId: 2.5.29.14 Criticality=false
+        SubjectKeyIdentifier [
+        KeyIdentifier [
+        0000: 50 2E 26 F3 F0 63 9C 7C   6F A5 4C 2B A6 7D A8 C4  P.&..c..o.L+....
+        0010: A6 E7 BC 4D                                        ...M
+        ]
+        ]
+        ```
+        </details>
+        EOF
+    - name: Create pre-release and upload APKs
+      if: "contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'true') && contains(steps.setup_vars.outputs.KRITA_BUILD_TYPE, 'Release')"
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      with:
+        files: |
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}all.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}armeabi-v7a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}arm64-v8a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86_64.apk
+        name: ${{ steps.setup_vars.outputs.RELEASE_NAME }}
+        tag_name: ${{ steps.setup_vars.outputs.RELEASE_TAG_NAME }}
+        draft: false
+        prerelease: true
+        body_path: Release-body.txt
+    - name: Create release and upload APKs
+      if: "contains(steps.setup_vars.outputs.RELEASE_IS_PRERELEASE, 'false') && contains(steps.setup_vars.outputs.KRITA_BUILD_TYPE, 'Release')"
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      with:
+        files: |
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}all.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}armeabi-v7a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}arm64-v8a.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86.apk
+          krita-apk/${{ steps.setup_vars.outputs.APK_NAME_PREFIX }}x86_64.apk
+        name: ${{ steps.setup_vars.outputs.RELEASE_NAME }}
+        tag_name: ${{ steps.setup_vars.outputs.RELEASE_TAG_NAME }}
+        draft: false
+        prerelease: false
+        body_path: Release-body.txt
