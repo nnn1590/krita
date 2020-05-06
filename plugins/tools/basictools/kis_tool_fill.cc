@@ -255,14 +255,19 @@ QWidget* KisToolFill::createOptionWidget()
     m_checkUsePattern = new QCheckBox(QString(), widget);
     m_checkUsePattern->setToolTip(i18n("When checked do not use the foreground color, but the pattern selected to fill with"));
 
-    QLabel *lbl_sampleLayers = new QLabel(i18n("Sample:"), widget);
+    QLabel *lbl_sampleLayers = new QLabel(i18nc("This is a label before a combobox with different choices regarding which layers "
+                                                "to take into considerationg when calculating the area to fill. "
+                                                "Options together with the label are: /Sample current layer/ /Sample all layers/ "
+                                                "/Sample color labeled layers/. Sample is a verb here and means something akin to 'take into account'.", "Sample:"), widget);
     m_cmbSampleLayersMode = new QComboBox(widget);
     m_cmbSampleLayersMode->addItem(sampleLayerModeToUserString(SAMPLE_LAYERS_MODE_CURRENT), SAMPLE_LAYERS_MODE_CURRENT);
     m_cmbSampleLayersMode->addItem(sampleLayerModeToUserString(SAMPLE_LAYERS_MODE_ALL), SAMPLE_LAYERS_MODE_ALL);
     m_cmbSampleLayersMode->addItem(sampleLayerModeToUserString(SAMPLE_LAYERS_MODE_COLOR_LABELED), SAMPLE_LAYERS_MODE_COLOR_LABELED);
     m_cmbSampleLayersMode->setEditable(false);
 
-    QLabel *lbl_cmbLabel = new QLabel(i18n("Label used:"), widget);
+    QLabel *lbl_cmbLabel = new QLabel(i18nc("This is a string in tool options for Fill Tool to describe a combobox about "
+                                            "a choice of color labels that a layer can be marked with. Those color labels "
+                                            "will be used for calculating the area to fill.", "Labels used:"), widget);
     m_cmbSelectedLabels = new KisColorFilterCombo(widget);
     m_cmbSelectedLabels->updateAvailableLabels(currentImage().isNull() ? KisNodeSP() : currentImage()->root());
 
@@ -331,21 +336,25 @@ void KisToolFill::updateGUI()
     m_checkUsePattern->setEnabled(useAdvancedMode);
 
     m_cmbSampleLayersMode->setEnabled(!selectionOnly && useAdvancedMode);
-    m_cmbSelectedLabels->setEnabled(!selectionOnly && useAdvancedMode);
+
+    bool sampleLayersModeIsColorLabeledLayers = m_cmbSampleLayersMode->currentData().toString() == SAMPLE_LAYERS_MODE_COLOR_LABELED;
+    m_cmbSelectedLabels->setEnabled(!selectionOnly && useAdvancedMode && sampleLayersModeIsColorLabeledLayers);
 }
 
 QString KisToolFill::sampleLayerModeToUserString(QString sampleLayersModeId)
 {
+    QString currentLayer = i18nc("Option in fill tool: take only the current layer into account when calculating the area to fill", "Current Layer");
     if (sampleLayersModeId == SAMPLE_LAYERS_MODE_CURRENT) {
-        return i18n("Current Layer");
+        return currentLayer;
     } else if (sampleLayersModeId == SAMPLE_LAYERS_MODE_ALL) {
-        return i18n("All Layers");
+        return i18nc("Option in fill tool: take all layers (merged) into account when calculating the area to fill", "All Layers");
     } else if (sampleLayersModeId == SAMPLE_LAYERS_MODE_COLOR_LABELED) {
-        return i18n("Color Labeled Layers");
+        return i18nc("Option in fill tool: take all layers that were labeled with a color label (more precisely: all those layers merged)"
+                     " into account when calculating the area to fill", "Color Labeled Layers");
     }
 
-    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(false, i18n("Current Layer"));
-    return i18n("Current Layer");
+    KIS_SAFE_ASSERT_RECOVER_RETURN_VALUE(false, currentLayer);
+    return currentLayer;
 }
 
 void KisToolFill::setCmbSampleLayersMode(QString sampleLayersModeId)
@@ -358,7 +367,7 @@ void KisToolFill::setCmbSampleLayersMode(QString sampleLayersModeId)
         }
     }
     m_sampleLayersMode = sampleLayersModeId;
-    m_cmbSelectedLabels->setEnabled(sampleLayersModeId == SAMPLE_LAYERS_MODE_COLOR_LABELED);
+    updateGUI();
 }
 
 void KisToolFill::activateConnectionsToImage()
@@ -407,7 +416,7 @@ void KisToolFill::slotSetSampleLayers(int index)
 {
     Q_UNUSED(index);
     m_sampleLayersMode = m_cmbSampleLayersMode->currentData(Qt::UserRole).toString();
-    m_cmbSelectedLabels->setEnabled(m_sampleLayersMode == SAMPLE_LAYERS_MODE_COLOR_LABELED);
+    updateGUI();
     m_configGroup.writeEntry("sampleLayersMode", m_sampleLayersMode);
 }
 
