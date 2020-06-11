@@ -1,7 +1,6 @@
 /*
- * This file is part of Krita
- *
- * Copyright (c) 2006 Cyrille Berger <cberger@cberger.net>
+ *  Copyright (c) 2020 Emmet O'Neill <emmetoneill.pdx@gmail.com>
+ *  Copyright (c) 2020 Eoin O'Neill <eoinoneill1991@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,32 +17,37 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef KIS_WDG_PATTERN_H
-#define KIS_WDG_PATTERN_H
+#ifndef KISTRANSPORTCONTROLS_H
+#define KISTRANSPORTCONTROLS_H
 
-#include <kis_config_widget.h>
+#include <QWidget>
 
-class Ui_WdgPatternOptions;
+#include "kritaui_export.h"
 
-class KisWdgPattern : public KisConfigWidget
+class KRITAUI_EXPORT KisTransportControls : public QWidget
 {
     Q_OBJECT
-public:
-    KisWdgPattern(QWidget* parent = 0);
-    ~KisWdgPattern() override;
-public:
-    inline const Ui_WdgPatternOptions* widget() const {
-        return m_widget;
-    }
-    void setConfiguration(const KisPropertiesConfigurationSP) override;
-    KisPropertiesConfigurationSP configuration() const override;
-private Q_SLOTS:
 
-    void slotWidthChanged(double w);
-    void slotHeightChanged(double h);
+public:
+    KisTransportControls(QWidget* parent = nullptr);
+    ~KisTransportControls();
+
+    QSize sizeHint() const override;
+
+public Q_SLOTS:
+    void setPlaying(bool playing);
+
+Q_SIGNALS:
+    void playPause();
+    void stop();
+    void forward();
+    void back();
+
 private:
-    Ui_WdgPatternOptions* m_widget;
+    class QPushButton* buttonBack;
+    class QPushButton* buttonStop;
+    class QPushButton* buttonPlayPause;
+    class QPushButton* buttonForward;
 };
 
-#endif
-
+#endif // KISTRANSPORTCONTROLS_H

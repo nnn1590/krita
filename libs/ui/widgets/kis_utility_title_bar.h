@@ -1,7 +1,6 @@
 /*
- * This file is part of Krita
- *
- * Copyright (c) 2006 Cyrille Berger <cberger@cberger.net>
+ *  Copyright (c) 2020 Emmet O'Neill <emmetoneill.pdx@gmail.com>
+ *  Copyright (c) 2020 Eoin O'Neill <eoinoneill1991@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,32 +17,40 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef KIS_WDG_PATTERN_H
-#define KIS_WDG_PATTERN_H
+#ifndef KISUTILITYTITLEBAR_H
+#define KISUTILITYTITLEBAR_H
 
-#include <kis_config_widget.h>
+#include <QWidget>
 
-class Ui_WdgPatternOptions;
-
-class KisWdgPattern : public KisConfigWidget
-{
-    Q_OBJECT
-public:
-    KisWdgPattern(QWidget* parent = 0);
-    ~KisWdgPattern() override;
-public:
-    inline const Ui_WdgPatternOptions* widget() const {
-        return m_widget;
-    }
-    void setConfiguration(const KisPropertiesConfigurationSP) override;
-    KisPropertiesConfigurationSP configuration() const override;
-private Q_SLOTS:
-
-    void slotWidthChanged(double w);
-    void slotHeightChanged(double h);
-private:
-    Ui_WdgPatternOptions* m_widget;
-};
-
+#ifdef Q_OS_MACOS
+#include <sys/types.h>
 #endif
 
+#include "kritaui_export.h"
+
+class QLabel;
+class QHBoxLayout;
+class QPushButton;
+
+class KRITAUI_EXPORT KisUtilityTitleBar : public QWidget
+{
+    Q_OBJECT
+
+public:
+    KisUtilityTitleBar(QWidget *parent = nullptr);
+    KisUtilityTitleBar(QLabel *title, QWidget *parent = nullptr);
+
+    virtual QSize sizeHint() const {return QSize(32,32);}
+
+protected:
+    QLabel *title;
+    QHBoxLayout *widgetArea;
+
+    const int SPACING_UNIT = 16;
+
+private:
+    QPushButton *floatButton;
+    QPushButton *closeButton;
+};
+
+#endif // KISUTILITYTITLEBAR_H
