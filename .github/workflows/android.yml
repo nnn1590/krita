@@ -51,6 +51,11 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        find . -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
+        find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        mkdir packaging/android/apk/src/org/nnn1590
+        mv packaging/android/apk/src/org/{krita,nnn1590}
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -185,6 +190,11 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        find . -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
+        find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        mkdir packaging/android/apk/src/org/nnn1590
+        mv packaging/android/apk/src/org/{krita,nnn1590}
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -319,6 +329,11 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        find . -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
+        find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        mkdir packaging/android/apk/src/org/nnn1590
+        mv packaging/android/apk/src/org/{krita,nnn1590}
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -453,6 +468,11 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        find . -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
+        find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        mkdir packaging/android/apk/src/org/nnn1590
+        mv packaging/android/apk/src/org/{krita,nnn1590}
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
