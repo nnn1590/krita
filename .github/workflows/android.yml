@@ -670,18 +670,19 @@ jobs:
         declare APK_NAME_PREFIX="$(find krita-apk -name 'krita-*-armeabi-v7a.apk' | sed -e 's#^.*/##g' -e 's#armeabi\-v7a\.apk$##g')"
         declare RELEASE_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#\-git# \(git #g')) for Android"
         declare RELEASE_TAG_NAME="$(find krita-apk -name 'krita-release-*-armeabi-v7a.apk' | sed -e 's#^.*/krita\-release\-##g' -e 's#\-armeabi\-v7a\.apk$##g' -e 's#git##g')"
-        declare RELEASE_TAG_NAME_PREFIX="${RELEASE_TAG_NAME:0:-7}"
+        declare RELEASE_TAG_NAME_PREFIX="${RELEASE_TAG_NAME:0:-13}"
+        declare RELEASE_IS_PRERELEASE="false"
+        if [[ "${APK_NAME_PREFIX}" == *"prealpha"* ]]; then
+          RELEASE_IS_PRERELEASE="true"
+          RELEASE_TAG_NAME_PREFIX="${RELEASE_TAG_NAME:0:-16}"
+        fi
         git fetch --tags
         [ $(git tag -l "${RELEASE_TAG_NAME}") ] && RELEASE_TAG_NAME="${RELEASE_TAG_NAME_PREFIX}$(git log --format="%H" -n1)"
         declare -i set_tag_name_loop=1
         [ $(git tag -l "${RELEASE_TAG_NAME}") ] && while :; do
           [ $(git tag -l "${RELEASE_TAG_NAME}-${set_tag_name_loop}") ] || break
           set_tag_name_loop+=1
-        done && RELEASE_TAG_NAME="${RELEASE_TAG_NAME_PREFIX}-${set_tag_name_loop}"
-        declare RELEASE_IS_PRERELEASE="false"
-        if [[ "${APK_NAME_PREFIX}" == *"prealpha"* ]]; then
-          RELEASE_IS_PRERELEASE="true"
-        fi
+        done && RELEASE_TAG_NAME="${RELEASE_TAG_NAME}-${set_tag_name_loop}"
         echo "::set-output name=APK_NAME_PREFIX::${APK_NAME_PREFIX}"
         echo "::set-output name=RELEASE_NAME::${RELEASE_NAME}"
         echo "::set-output name=RELEASE_TAG_NAME::${RELEASE_TAG_NAME}"
