@@ -84,15 +84,15 @@ void FillProcessingVisitor::fillPaintDevice(KisPaintDeviceSP device, KisUndoAdap
         fillPainter.setProgress(helper.updater());
 
         if (m_usePattern) {
-            fillPainter.fillRect(fillRect, m_resources->currentPattern(), m_resources->fillTransform());
+            fillPainter.fillRectNoCompose(fillRect, m_resources->currentPattern(), m_resources->fillTransform());
         } else if (m_useBgColor) {
             fillPainter.fillRect(fillRect,
                                  m_resources->currentBgColor(),
-                                 m_resources->opacity());
+                                 OPACITY_OPAQUE_U8);
         } else {
             fillPainter.fillRect(fillRect,
                                  m_resources->currentFgColor(),
-                                 m_resources->opacity());
+                                 OPACITY_OPAQUE_U8);
         }
 
         QVector<QRect> dirtyRect = fillPainter.takeDirtyRegion();
@@ -125,7 +125,7 @@ void FillProcessingVisitor::fillPaintDevice(KisPaintDeviceSP device, KisUndoAdap
         fillPainter.setFeather(m_feather);
         fillPainter.setFillThreshold(m_fillThreshold);
         fillPainter.setCareForSelection(true);
-        fillPainter.setUseSelectionAsBoundary((m_selection.isNull() || m_selection->hasNonEmptyPixelSelection()) ? m_useSelectionAsBoundary : false);
+        fillPainter.setUseSelectionAsBoundary((m_selection.isNull() || !m_selection->hasNonEmptyPixelSelection()) ? false : m_useSelectionAsBoundary);
         fillPainter.setWidth(fillRect.width());
         fillPainter.setHeight(fillRect.height());
         fillPainter.setUseCompositioning(!m_useFastMode);

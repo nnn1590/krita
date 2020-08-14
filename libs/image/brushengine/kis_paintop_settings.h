@@ -35,6 +35,8 @@ class KisPaintopSettingsUpdateProxy;
 class KisResourcesInterface;
 using KisResourcesInterfaceSP = QSharedPointer<KisResourcesInterface>;
 
+class KoCanvasResourcesInterface;
+using KoCanvasResourcesInterfaceSP = QSharedPointer<KoCanvasResourcesInterface>;
 
 /**
  * Configuration property used to control whether airbrushing is enabled.
@@ -245,6 +247,11 @@ public:
      */
     virtual qreal paintOpSize() const = 0;
 
+    /**
+     * @return pattern size saved in the properties
+     */
+    virtual qreal paintOpPatternSize();
+
     void setEraserMode(bool value);
     bool eraserMode();
 
@@ -337,6 +344,15 @@ public:
      * Set resource interface that will be used for loading linked resources
      */
     void setResourcesInterface(KisResourcesInterfaceSP resourcesInterface);
+
+
+    virtual bool hasPatternSettings() const;
+
+    virtual QList<int> requiredCanvasResources() const;
+
+    KoCanvasResourcesInterfaceSP canvasResourcesInterface() const;
+    void setCanvasResourcesInterface(KoCanvasResourcesInterfaceSP canvasResourcesInterface);
+
 
 protected:
 

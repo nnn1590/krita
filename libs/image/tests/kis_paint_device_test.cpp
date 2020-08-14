@@ -35,11 +35,11 @@
 #include "kis_selection.h"
 #include "kis_datamanager.h"
 #include "kis_global.h"
-#include "testutil.h"
+#include <testutil.h>
 #include "kis_transaction.h"
 #include "kis_image.h"
 #include "config-limit-long-tests.h"
-#include "kistest.h"
+#include "testimage.h"
 
 
 class KisFakePaintDeviceWriter : public KisPaintDeviceWriter {
@@ -1055,9 +1055,10 @@ void KisPaintDeviceTest::testWrappedRandomAccessor()
     int x;
     int y;
 
+    KisRandomAccessorSP dstIt = dev->createRandomAccessorNG();
     x = 3;
     y = 3;
-    KisRandomAccessorSP dstIt = dev->createRandomAccessorNG();
+    dstIt->moveTo(x, y);
 
     QVERIFY(!memcmp(dstIt->rawData(), c1.data(), pixelSize));
     QCOMPARE(dstIt->numContiguousColumns(x), 17);
@@ -1358,7 +1359,7 @@ public:
             case 1:
             {
                 int newValue = m_cache.getValue();
-                Q_ASSERT(newValue >= m_oldValue);
+                KIS_ASSERT(newValue >= m_oldValue);
                 Q_UNUSED(newValue);
             }
                 break;
