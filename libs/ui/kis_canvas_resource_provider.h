@@ -53,41 +53,6 @@ class KRITAUI_EXPORT KisCanvasResourceProvider : public QObject
     Q_OBJECT
 
 public:
-
-    enum Resources {
-        HdrExposure = KoCanvasResourceProvider::KritaStart + 1,
-        CurrentPattern,
-        CurrentGamutMask,
-        GamutMaskActive,
-        CurrentGradient,
-        CurrentDisplayProfile,
-        CurrentKritaNode,
-        CurrentPaintOpPreset,
-        CurrentGeneratorConfiguration,
-        CurrentCompositeOp,
-        CurrentEffectiveCompositeOp,
-        LodAvailability, ///<-user choice
-        LodSizeThreshold, ///<-user choice
-        LodSizeThresholdSupported, ///<-paintop property
-        EffectiveLodAvailablility, ///<- a superposition of user choice, threshold and paintop traits
-        EraserMode,
-        MirrorHorizontal,
-        MirrorVertical,
-        MirrorHorizontalLock,
-        MirrorVerticalLock,
-        MirrorVerticalHideDecorations,
-        MirrorHorizontalHideDecorations,
-        Opacity,
-        Flow,
-        Size,
-        HdrGamma,
-        GlobalAlphaLock,
-        DisablePressure,
-        PreviousPaintOpPreset,
-        EffectiveZoom ///<-Used only by painting tools for non-displaying purposes
-    };
-
-
     KisCanvasResourceProvider(KisViewManager * view);
     ~KisCanvasResourceProvider() override;
 
@@ -165,6 +130,9 @@ public:
 
     void setSize(qreal size);
     qreal size() const;
+
+    void setPatternSize(qreal size);
+    qreal patternSize() const;
 
     void setGlobalAlphaLock(bool lock);
     bool globalAlphaLock() const;

@@ -44,7 +44,7 @@
 #include "kis_fill_painter.h"
 #include "kis_shape_selection.h"
 #include "util.h"
-#include "testutil.h"
+#include <testutil.h>
 #include "kis_keyframe_channel.h"
 #include "kis_image_animation_interface.h"
 #include "kis_layer_properties_icons.h"
@@ -55,7 +55,7 @@
 #include <generator/kis_generator_registry.h>
 
 #include <KoResourcePaths.h>
-#include  <sdk/tests/kistest.h>
+#include  <sdk/tests/testui.h>
 #include <filestest.h>
 
 const QString KraMimetype = "application/x-krita";
@@ -362,7 +362,7 @@ void KisKraSaverTest::testRoundTripColorizeMask()
     KisPaintLayerSP layer1 = new KisPaintLayer(image, "paint1", OPACITY_OPAQUE_U8, weirdCS);
     image->addNode(layer1);
 
-    KisColorizeMaskSP mask = new KisColorizeMask();
+    KisColorizeMaskSP mask = new KisColorizeMask(image, "mask1");
     image->addNode(mask, layer1);
     mask->initializeCompositeOp();
     delete mask->setColorSpace(layer1->colorSpace());
@@ -404,7 +404,7 @@ void KisKraSaverTest::testRoundTripColorizeMask()
     QVERIFY(mask2);
 
     QCOMPARE(mask2->compositeOpId(), mask->compositeOpId());
-    QCOMPARE(mask2->colorSpace(), mask->colorSpace());
+    QCOMPARE(*mask2->colorSpace(), *mask->colorSpace());
     QCOMPARE(KisLayerPropertiesIcons::nodeProperty(mask, KisLayerPropertiesIcons::colorizeEditKeyStrokes, true).toBool(), false);
     QCOMPARE(KisLayerPropertiesIcons::nodeProperty(mask, KisLayerPropertiesIcons::colorizeShowColoring, true).toBool(), false);
 
@@ -513,7 +513,7 @@ void KisKraSaverTest::testRoundTripShapeSelection()
 
     shapeSelection->addShape(path);
 
-    KisTransparencyMaskSP tmask = new KisTransparencyMask();
+    KisTransparencyMaskSP tmask = new KisTransparencyMask(p.image, "tmask");
     tmask->setSelection(selection);
     p.image->addNode(tmask, p.layer);
 

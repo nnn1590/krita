@@ -1,6 +1,4 @@
-if (NOT WIN32 AND NOT APPLE)
-    add_subdirectory(tests)
-endif()
+add_subdirectory(tests)
 
 set(KRITA_ANIMATIONDOCKER_SOURCES
     animation_dockers.cpp
@@ -41,7 +39,6 @@ set(KRITA_ANIMATIONDOCKER_SOURCES
 )
 
 ki18n_wrap_ui(KRITA_ANIMATIONDOCKER_SOURCES
-    wdg_animation.ui
     onion_skins_docker.ui
     wdg_animation_curves.ui
 )

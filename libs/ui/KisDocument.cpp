@@ -334,7 +334,6 @@ public:
 
     QColor globalAssistantsColor;
 
-    KisSharedPtr<KisReferenceImagesLayer> referenceImagesLayer;
     KisGridConfig gridConfig;
 
     StdLockableWrapper<QMutex> savingLock;
@@ -537,7 +536,7 @@ KisDocument::KisDocument(bool addStorage)
     // preload the krita resources
     KisResourceServerProvider::instance();
 
-    d->shapeController = new KisShapeController(this, d->nserver);
+    d->shapeController = new KisShapeController(d->nserver, d->undoStack, this);
     d->koShapeController = new KoShapeController(0, d->shapeController);
     d->shapeController->resourceManager()->setGlobalShapeController(d->koShapeController);
 
@@ -897,7 +896,7 @@ void KisDocument::copyFromDocumentImpl(const KisDocument &rhs, CopyPolicy policy
         connect(d->undoStack, SIGNAL(cleanChanged(bool)), this, SLOT(slotUndoStackCleanChanged(bool)));
         connect(d->autoSaveTimer, SIGNAL(timeout()), this, SLOT(slotAutoSave()));
 
-        d->shapeController = new KisShapeController(this, d->nserver);
+        d->shapeController = new KisShapeController(d->nserver, d->undoStack, this);
         d->koShapeController = new KoShapeController(0, d->shapeController);
         d->shapeController->resourceManager()->setGlobalShapeController(d->koShapeController);
     }
@@ -913,6 +912,7 @@ void KisDocument::copyFromDocumentImpl(const KisDocument &rhs, CopyPolicy policy
             d->image->copyFromImage(*(rhs.d->image));
             d->image->unlock();
             rhs.d->image->unlock();
+
             setCurrentImage(d->image, /* forceInitialUpdate = */ true);
         } else {
             // clone the image with keeping the GUIDs of the layers intact
@@ -2213,7 +2213,9 @@ void KisDocument::setReferenceImagesLayer(KisSharedPtr<KisReferenceImagesLayer> 
 {
     KisReferenceImagesLayerSP currentReferenceLayer = referenceImagesLayer();
 
-    if (currentReferenceLayer == layer) {
+    // updateImage=false inherently means we are not changing the
+    // reference images layer, but just would like to update its signals.
+    if (currentReferenceLayer == layer && updateImage) {
         return;
     }
 

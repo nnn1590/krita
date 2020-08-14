@@ -47,7 +47,6 @@
 #include "commands/kis_image_commands.h"
 #include "kis_layer.h"
 #include "kis_meta_data_merge_strategy_registry.h"
-#include "kis_name_server.h"
 #include "kis_paint_layer.h"
 #include "kis_projection_leaf.h"
 #include "kis_painter.h"
@@ -147,7 +146,6 @@ public:
         , colorSpace(c ? c : KoColorSpaceRegistry::instance()->rgb8())
         , isolateLayer(false)
         , isolateGroup(false)
-        , nserver(1)
         , undoStore(undo ? undo : new KisDumbUndoStore())
         , legacyUndoAdapter(undoStore.data(), _q)
         , postExecutionUndoAdapter(undoStore.data(), _q)
@@ -224,8 +222,6 @@ public:
     bool isolateGroup;
 
     bool wrapAroundModePermitted = false;
-
-    KisNameServer nserver;
 
     QScopedPointer<KisUndoStore> undoStore;
     KisLegacyUndoAdapter legacyUndoAdapter;
@@ -459,8 +455,6 @@ void KisImage::copyFromImageImpl(const KisImage &rhs, int policy)
 
     EMIT_IF_NEEDED sigLayersChangedAsync();
 
-    m_d->nserver = rhs.m_d->nserver;
-
     vKisAnnotationSP newAnnotations;
     Q_FOREACH (KisAnnotationSP annotation, rhs.m_d->annotations) {
         newAnnotations << annotation->clone();
@@ -655,21 +649,31 @@ QString KisImage::nextLayerName(const QString &_baseName) const
 {
     QString baseName = _baseName;
 
-    if (m_d->nserver.currentSeed() == 0) {
-        m_d->nserver.number();
+    int numLayers = 0;
+    int maxLayerIndex = 0;
+    QRegularExpression numberedLayerRegexp(".* (\\d+)$");
+    KisLayerUtils::recursiveApplyNodes(root(),
+        [&numLayers, &maxLayerIndex, &numberedLayerRegexp] (KisNodeSP node) {
+            if (node->inherits("KisLayer")) {
+                QRegularExpressionMatch match = numberedLayerRegexp.match(node->name());
+
+                if (match.hasMatch()) {
+                    maxLayerIndex = qMax(maxLayerIndex, match.captured(1).toInt());
+                }
+                numLayers++;
+            }
+        });
+
+    // special case if there is only root node
+    if (numLayers == 1) {
         return i18n("background");
     }
 
     if (baseName.isEmpty()) {
-        baseName = i18n("Layer");
+        baseName = i18n("Paint Layer");
     }
 
-    return QString("%1 %2").arg(baseName).arg(m_d->nserver.number());
-}
-
-void KisImage::rollBackLayerName()
-{
-    m_d->nserver.rollback();
+    return QString("%1 %2").arg(baseName).arg(maxLayerIndex + 1);
 }
 
 KisCompositeProgressProxy* KisImage::compositeProgressProxy()
@@ -1856,7 +1860,7 @@ void KisImage::stopIsolatedMode()
             setClearsRedoOnStart(false);
         }
 
-        void initStrokeCallback() {
+        void initStrokeCallback() override {
             if (!m_image->m_d->isolationRootNode)  return;
 
             m_oldRootNode = m_image->m_d->isolationRootNode;

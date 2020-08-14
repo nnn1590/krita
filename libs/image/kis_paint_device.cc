@@ -426,7 +426,7 @@ public:
 private:
     qint64 estimateDataSize(Data *data) const {
         const QRect &rc = data->dataManager()->extent();
-        return rc.width() * rc.height() * data->colorSpace()->pixelSize();
+        return qint64(rc.width()) * rc.height() * data->colorSpace()->pixelSize();
     }
 
 public:
@@ -536,10 +536,20 @@ private:
          * default bounds object, and only after that ask
          * currentData() to start cloning.
          */
-        q->setDefaultPixel(KoColor(srcData->dataManager()->defaultPixel(), colorSpace()));
         q->setDefaultBounds(src->defaultBounds());
 
         currentData()->prepareClone(srcData);
+
+
+        /**
+         * Default pixel must be updated **after** the color space
+         * of the device has been adjusted in prpareClone(). Otherwise,
+         * colorSpace() of the resulting KoColor object will be
+         * incorrect.
+         */
+        KIS_SAFE_ASSERT_RECOVER_RETURN(*colorSpace() == *src->colorSpace());
+        q->setDefaultPixel(KoColor(srcData->dataManager()->defaultPixel(), colorSpace()));
+
     }
 
     bool fastBitBltPossibleImpl(Data *srcData)

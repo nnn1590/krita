@@ -228,6 +228,9 @@ LayerBox::LayerBox()
     connect(m_nodeModel, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)), SLOT(slotForgetAboutSavedNodeBeforeEditSelectionMode()));
     connect(m_nodeModel, SIGNAL(modelReset()), SLOT(slotForgetAboutSavedNodeBeforeEditSelectionMode()));
 
+    // we should update expanded state of the nodes on adding the nodes
+    connect(m_nodeModel, SIGNAL(rowsInserted(QModelIndex,int,int)), SLOT(slotNodeCollapsedChanged()));
+    connect(m_nodeModel, SIGNAL(modelReset()), SLOT(slotNodeCollapsedChanged()));
 
     KisAction *showGlobalSelectionMask = new KisAction(i18n("&Show Global Selection Mask"), this);
     showGlobalSelectionMask->setObjectName("show-global-selection-mask");
@@ -415,6 +418,9 @@ void LayerBox::setViewManager(KisViewManager* kisview)
     Q_ASSERT(m_changeCloneSourceAction);
     connect(m_changeCloneSourceAction, &KisAction::triggered,
             this, &LayerBox::slotChangeCloneSourceClicked);
+
+    m_layerToggleSolo = actionManager->createAction("toggle_layer_soloing");
+    connect(m_layerToggleSolo, SIGNAL(triggered(bool)), this, SLOT(toggleActiveLayerSolo()));
 }
 
 void LayerBox::setCanvas(KoCanvasBase *canvas)
@@ -847,7 +853,9 @@ void LayerBox::slotSelectOpaque()
 
 void LayerBox::slotNodeCollapsedChanged()
 {
-    expandNodesRecursively(m_image->rootLayer(), m_filteringModel, m_wdgLayerBox->listLayers);
+    if (m_nodeModel->hasDummiesFacade()) {
+        expandNodesRecursively(m_image->rootLayer(), m_filteringModel, m_wdgLayerBox->listLayers);
+    }
 }
 
 inline bool isSelectionMask(KisNodeSP node)
@@ -1159,6 +1167,22 @@ void LayerBox::slotUpdateIcons() {
 
     // call child function about needing to update icons
     m_wdgLayerBox->listLayers->slotUpdateIcons();
+}
+
+void LayerBox::toggleActiveLayerSolo() {
+    NodeView* view = m_wdgLayerBox->listLayers;
+    if (!view)
+        return;
+
+    KisNodeSP node = m_nodeManager->activeNode();
+    if (!node)
+        return;
+
+    QModelIndex index = m_filteringModel->indexFromNode(node);
+    if (!index.isValid())
+        return;
+
+    view->toggleSolo(index);
 }
 
 void LayerBox::slotUpdateThumbnailIconSize()
