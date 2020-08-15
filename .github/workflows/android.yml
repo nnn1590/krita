@@ -51,6 +51,7 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -185,6 +186,7 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -319,6 +321,7 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -453,6 +456,7 @@ jobs:
     - name: Build Krita
       run: |
         . envsetup.sh
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
