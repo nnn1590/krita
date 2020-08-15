@@ -57,6 +57,7 @@ jobs:
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -197,6 +198,7 @@ jobs:
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -337,6 +339,7 @@ jobs:
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
@@ -477,6 +480,7 @@ jobs:
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
+        sed -i -e 's/-with qtmultimedia/-skip qtmultimedia/g' 3rdparty/ext_qt/CMakeLists.txt
         cd packaging/android
         declare BOOST_VERSION="$(grep -- '--boost=' androidbuild.sh | awk '{print $1}' | sed -e 's/--boost=//')"
         if [ ! "x$(command -v wget)X" == "xX" ]; then
