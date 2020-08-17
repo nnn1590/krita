@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-armeabi-v7a:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -146,7 +146,7 @@ jobs:
         name: krita-apk
         path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
   build-arm64-v8a:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -287,7 +287,7 @@ jobs:
         name: krita-apk
         path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
   build-x86:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -428,7 +428,7 @@ jobs:
         name: krita-apk
         path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
   build-x86_64:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -570,7 +570,7 @@ jobs:
         path: ${{ steps.align_and_sign_apk.outputs.KRITA_BUILD_APK_PATH }}
   build-all:
     needs: [build-armeabi-v7a, build-arm64-v8a, build-x86, build-x86_64]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Download APKs from GitHub artifacts
       uses: actions/download-artifact@v1
@@ -652,7 +652,7 @@ jobs:
         path: ${{ steps.merge_lib_apk.outputs.KRITA_BUILD_TYPE_INFO_PATH }}
   release:
     needs: [build-armeabi-v7a, build-arm64-v8a, build-x86, build-x86_64, build-all]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
       with:
@@ -702,7 +702,7 @@ jobs:
         Built with:
         - The latest Android SDK
         - Android NDK r18b
-        - Ubuntu 18.04 (amd64)
+        - Ubuntu 20.04 (amd64)
         
         `krita-*-all.apk` is a simple merge of `lib/` directories from all architectures, so I don't know if it works.
         
