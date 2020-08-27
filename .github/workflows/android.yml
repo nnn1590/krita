@@ -35,6 +35,8 @@ jobs:
         mkdir "${HOME}/files"
     - name: Delete large unneeded files
       run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Remove Fortran(f95) compiler(package gfortran{,-8})
+      run: sudo apt purge gfortran{,-8}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
@@ -176,6 +178,8 @@ jobs:
         mkdir "${HOME}/files"
     - name: Delete large unneeded files
       run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Remove Fortran(f95) compiler(package gfortran{,-8})
+      run: sudo apt purge gfortran{,-8}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
@@ -317,6 +321,8 @@ jobs:
         mkdir "${HOME}/files"
     - name: Delete large unneeded files
       run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Remove Fortran(f95) compiler(package gfortran{,-8})
+      run: sudo apt purge gfortran{,-8}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
@@ -458,6 +464,8 @@ jobs:
         mkdir "${HOME}/files"
     - name: Delete large unneeded files
       run: sudo rm -rf /opt/ghc /usr/share/{dotnet,rust}
+    - name: Remove Fortran(f95) compiler(package gfortran{,-8})
+      run: sudo apt purge gfortran{,-8}
     - name: Setup Android SDK and NDK
       run: |
         . envsetup.sh
