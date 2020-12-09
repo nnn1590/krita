@@ -206,11 +206,12 @@ set(kritaimage_LIB_SRCS
    kis_update_time_monitor.cpp
    KisImageConfigNotifier.cpp
    kis_group_layer.cc
+   kis_external_layer_iface.cc
    kis_count_visitor.cpp
    kis_histogram.cc
    kis_image_interfaces.cpp
    kis_image_animation_interface.cpp
-   kis_time_range.cpp
+   kis_time_span.cpp
    kis_node_graph_listener.cpp
    kis_image.cc
    kis_image_signal_router.cpp
@@ -290,6 +291,7 @@ set(kritaimage_LIB_SRCS
    kis_selection_filters.cpp
    KisProofingConfiguration.h
    KisRecycleProjectionsJob.cpp
+   kis_selection_component.cc
 
    kis_keyframe.cpp
    kis_keyframe_channel.cpp
@@ -320,10 +322,13 @@ set(kritaimage_LIB_SRCS
 
    kis_node_query_path.cc
 
+   KisTranslateLayerNamesVisitor.cpp
 
-    kis_asl_layer_style_serializer.cpp
-    KisAslStorage.cpp
-    kis_psd_layer_style.cpp
+   kis_asl_layer_style_serializer.cpp
+   KisAslStorage.cpp
+   kis_psd_layer_style.cpp
+   KisBezierGradientMesh.cpp
+   KisBezierTransformMesh.cpp
 )
 
 set(einspline_SRCS

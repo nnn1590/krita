@@ -2,19 +2,7 @@
  *  Copyright (c) 2009 Cyrille Berger <cberger@cberger.net>
  *  Copyright (c) 2014 Sven Langkamp <sven.langkamp@gmail.com>
  *
- *  This library is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU Lesser General Public License as published by
- *  the Free Software Foundation; version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 
@@ -46,6 +34,7 @@ OverviewWidget::OverviewWidget(QWidget * parent)
     setMouseTracking(true);
     KisConfig cfg(true);
     slotThemeChanged();
+    recalculatePreviewDimensions();
 }
 
 OverviewWidget::~OverviewWidget()
@@ -74,21 +63,30 @@ void OverviewWidget::setCanvas(KoCanvasBase * canvas)
     }
 }
 
-QSize OverviewWidget::recalculatePreviewSize()
+void OverviewWidget::recalculatePreviewDimensions()
 {
+    if (!m_canvas || !m_canvas->image()) {
+        return;
+    }
+
     QSize imageSize(m_canvas->image()->bounds().size());
 
     const qreal hScale = 1.0 * this->width() / imageSize.width();
     const qreal vScale = 1.0 * this->height() / imageSize.height();
 
     m_previewScale = qMin(hScale, vScale);
+    m_previewSize = imageSize * m_previewScale;
+    m_previewOrigin = calculatePreviewOrigin(m_previewSize);
 
-    return imageSize * m_previewScale;
 }
 
-QPointF OverviewWidget::previewOrigin()
+bool OverviewWidget::isPixelArt()
 {
-    const QSize previewSize = recalculatePreviewSize();
+    return m_previewScale > 1;
+}
+
+QPointF OverviewWidget::calculatePreviewOrigin(QSize previewSize)
+{
     return QPointF((width() - previewSize.width()) / 2.0f, (height() - previewSize.height()) / 2.0f);
 }
 
@@ -132,8 +130,8 @@ void OverviewWidget::resizeEvent(QResizeEvent *event)
     Q_UNUSED(event);
     if (m_canvas) {
         if (!m_oldPixmap.isNull()) {
-            QSize newSize = recalculatePreviewSize();
-            m_pixmap = m_oldPixmap.scaled(newSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            recalculatePreviewDimensions();
+            m_pixmap = m_oldPixmap.scaled(m_previewSize, Qt::KeepAspectRatio, Qt::FastTransformation);
         }
         m_imageIdleWatcher.startCountdown();
     }
@@ -196,8 +194,8 @@ void OverviewWidget::generateThumbnail()
     if (isVisible()) {
         QMutexLocker locker(&mutex);
         if (m_canvas) {
-            QSize previewSize = recalculatePreviewSize();
-            if(previewSize.isValid()){
+            recalculatePreviewDimensions();
+            if(m_previewSize.isValid()){
                 KisImageSP image = m_canvas->image();
 
                 /**
@@ -209,8 +207,9 @@ void OverviewWidget::generateThumbnail()
                     m_imageIdleWatcher.startCountdown();
                     return;
                 }
+                OverviewThumbnailStrokeStrategy* stroke;
+                stroke = new OverviewThumbnailStrokeStrategy(image->projection(), image->bounds(), m_previewSize, isPixelArt());
 
-                OverviewThumbnailStrokeStrategy* stroke = new OverviewThumbnailStrokeStrategy(image->projection(), image->bounds(), previewSize);
                 connect(stroke, SIGNAL(thumbnailUpdated(QImage)), this, SLOT(updateThumbnail(QImage)));
 
                 strokeId = image->startStroke(stroke);
@@ -224,6 +223,7 @@ void OverviewWidget::updateThumbnail(QImage pixmap)
 {
     m_pixmap = QPixmap::fromImage(pixmap);
     m_oldPixmap = m_pixmap.copy();
+    m_image = pixmap;
     update();
 }
 
@@ -238,10 +238,10 @@ void OverviewWidget::paintEvent(QPaintEvent* event)
     QWidget::paintEvent(event);
 
     if (m_canvas) {
+        recalculatePreviewDimensions();
         QPainter p(this);
 
-        const QSize previewSize = recalculatePreviewSize();
-        const QRectF previewRect = QRectF(previewOrigin(), previewSize);
+        const QRectF previewRect = QRectF(m_previewOrigin, m_previewSize);
         p.drawPixmap(previewRect.toRect(), m_pixmap);
 
         QRect r = rect();
@@ -258,6 +258,7 @@ void OverviewWidget::paintEvent(QPaintEvent* event)
         pen.setStyle(Qt::SolidLine);
         p.setPen(pen);
         p.drawPolygon(previewPolygon());
+
     }
 }
 

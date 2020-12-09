@@ -6,19 +6,7 @@
  *  Copyright (c) 2007,2008,2010 Cyrille Berger <cberger@cberger.net>
  *  Copyright (c) 2009 Lukáš Tvrdý <lukast.dev@gmail.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_tool_freehand.h"
@@ -203,6 +191,11 @@ void KisToolFreehand::beginPrimaryAction(KoPointerEvent *event)
         if (paintability == KisToolPaint::VECTOR || paintability == KisToolPaint::CLONE){
             KisCanvas2 * kiscanvas = static_cast<KisCanvas2*>(canvas());
             QString message = i18n("The brush tool cannot paint on this layer.  Please select a paint layer or mask.");
+            kiscanvas->viewManager()->showFloatingMessage(message, koIcon("object-locked"));
+        }
+        else if (paintability == MYPAINTBRUSH_UNPAINTABLE) {
+            KisCanvas2 * kiscanvas = static_cast<KisCanvas2*>(canvas());
+            QString message = i18n("The MyPaint Brush Engine is not available for this colorspace");
             kiscanvas->viewManager()->showFloatingMessage(message, koIcon("object-locked"));
         }
         event->ignore();

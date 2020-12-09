@@ -1,19 +1,7 @@
 /*
  *  Copyright (c) 2017 Dmitry Kazakov <dimula73@gmail.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "KisPasteActionFactories.h"
@@ -46,13 +34,18 @@
 #include "kis_algebra_2d.h"
 #include <KoShapeMoveCommand.h>
 #include <KoShapeReorderCommand.h>
-#include "kis_time_range.h"
+#include "kis_time_span.h"
 #include "kis_keyframe_channel.h"
 #include "kis_raster_keyframe_channel.h"
 #include "kis_painter.h"
 #include <KisPart.h>
 #include <KisDocument.h>
 #include <KisReferenceImagesLayer.h>
+#include <KoShapeBackgroundCommand.h>
+#include <KoShapeStrokeCommand.h>
+#include <KoShapeBackground.h>
+#include <KoShapeStroke.h>
+
 
 namespace {
 QPointF getFittingOffset(QList<KoShape*> shapes,
@@ -213,7 +206,7 @@ void KisPasteActionFactory::run(bool pasteAtCursorPosition, KisViewManager *view
         return;
     }
 
-    KisTimeRange range;
+    KisTimeSpan range;
     const QRect fittingBounds = pasteAtCursorPosition ? QRect() : image->bounds();
     KisPaintDeviceSP clip = KisClipboard::instance()->clip(fittingBounds, true, &range);
 
@@ -237,7 +230,7 @@ void KisPasteActionFactory::run(bool pasteAtCursorPosition, KisViewManager *view
 
         if (range.isValid()) {
             newLayer->enableAnimation();
-            KisKeyframeChannel *channel = newLayer->getKeyframeChannel(KisKeyframeChannel::Content.id(), true);
+            KisKeyframeChannel *channel = newLayer->getKeyframeChannel(KisKeyframeChannel::Raster.id(), true);
             KisRasterKeyframeChannel *rasterChannel = dynamic_cast<KisRasterKeyframeChannel*>(channel);
             rasterChannel->importFrame(range.start(), clip, 0);
 
@@ -311,4 +304,40 @@ void KisPasteReferenceActionFactory::run(KisViewManager *viewManager)
     doc->addCommand(KisReferenceImagesLayer::addReferenceImages(doc, {reference}));
 
     KoToolManager::instance()->switchToolRequested("ToolReferenceImages");
+}
+
+void KisPasteShapeStyleActionFactory::run(KisViewManager *view)
+{
+    KoSvgPaste paste;
+
+    KisCanvas2 *canvas = view->canvasBase();
+
+    KoShapeManager *shapeManager = canvas->shapeManager();
+    QList<KoShape*> selectedShapes = shapeManager->selection()->selectedEditableShapes();
+
+    if (selectedShapes.isEmpty()) return;
+
+    if (paste.hasShapes()) {
+        KoCanvasBase *canvas = view->canvasBase();
+
+        QSizeF fragmentSize;
+        QList<KoShape*> shapes =
+            paste.fetchShapes(canvas->shapeController()->documentRectInPixels(),
+                              canvas->shapeController()->pixelsPerInch(), &fragmentSize);
+
+        if (!shapes.isEmpty()) {
+            KoShape *referenceShape = shapes.first();
+
+
+            KUndo2Command *parentCommand = new KUndo2Command(kundo2_i18n("Paste Style"));
+
+            new KoShapeBackgroundCommand(selectedShapes, referenceShape->background(), parentCommand);
+            new KoShapeStrokeCommand(selectedShapes, referenceShape->stroke(), parentCommand);
+
+
+            canvas->addCommand(parentCommand);
+        }
+
+        qDeleteAll(shapes);
+    }
 }

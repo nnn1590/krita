@@ -7,19 +7,7 @@
  *  Copyright (C) 2007 Boudewijn Rempt <boud@valdyas.org>
  *  Copyright (c) 2011 José Luis Vergara <pentalis@gmail.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "LayerBox.h"
@@ -53,6 +41,7 @@
 #include <KoColorSpace.h>
 #include <KoCompositeOpRegistry.h>
 #include <KisDocument.h>
+#include <kis_time_span.h>
 
 #include <kis_types.h>
 #include <kis_image.h>
@@ -1129,32 +1118,20 @@ void LayerBox::slotKeyframeChannelAdded(KisKeyframeChannel *channel)
     }
 }
 
-void LayerBox::watchOpacityChannel(KisKeyframeChannel *channel)
+void LayerBox::watchOpacityChannel(KisKeyframeChannel *newChannel)
 {
-    if (m_opacityChannel) {
-        m_opacityChannel->disconnect(this);
+    if (newChannel) {
+        if (m_opacityChannel) {
+            m_opacityChannel->disconnect(this);
+        }
+
+        m_opacityChannel = newChannel;
+        connect(m_opacityChannel, &KisKeyframeChannel::sigChannelUpdated, [this](const KisTimeSpan &affectedTimeSpan, const QRect &affectedArea){
+            if (!m_blockOpacityUpdate) {
+                updateUI(); // TODO: Make sure this is doing something useful.
+            }
+        });
     }
-
-    m_opacityChannel = channel;
-    if (m_opacityChannel) {
-        connect(m_opacityChannel, SIGNAL(sigKeyframeAdded(KisKeyframeSP)), this, SLOT(slotOpacityKeyframeChanged(KisKeyframeSP)));
-        connect(m_opacityChannel, SIGNAL(sigKeyframeRemoved(KisKeyframeSP)), this, SLOT(slotOpacityKeyframeChanged(KisKeyframeSP)));
-        connect(m_opacityChannel, SIGNAL(sigKeyframeMoved(KisKeyframeSP)), this, SLOT(slotOpacityKeyframeMoved(KisKeyframeSP)));
-        connect(m_opacityChannel, SIGNAL(sigKeyframeChanged(KisKeyframeSP)), this, SLOT(slotOpacityKeyframeChanged(KisKeyframeSP)));
-    }
-}
-
-void LayerBox::slotOpacityKeyframeChanged(KisKeyframeSP keyframe)
-{
-    Q_UNUSED(keyframe);
-    if (m_blockOpacityUpdate) return;
-    updateUI();
-}
-
-void LayerBox::slotOpacityKeyframeMoved(KisKeyframeSP keyframe, int fromTime)
-{
-    Q_UNUSED(fromTime);
-    slotOpacityKeyframeChanged(keyframe);
 }
 
 void LayerBox::slotImageTimeChanged(int time)

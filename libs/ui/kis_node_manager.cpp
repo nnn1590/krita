@@ -1,19 +1,7 @@
 /*
  *  Copyright (C) 2007 Boudewijn Rempt <boud@valdyas.org>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_node_manager.h"
@@ -950,7 +938,7 @@ bool KisNodeManager::trySetNodeProperties(KisNodeSP node, KisImageSP image, KisB
         }
     }
 
-    KisNodePropertyListCommand::setNodePropertiesNoUndo(node, image, properties);
+    KisNodePropertyListCommand::setNodePropertiesAutoUndo(node, image, properties);
 
     return true;
 }
@@ -1222,7 +1210,7 @@ void KisNodeManager::Private::saveDeviceAsImage(KisPaintDeviceSP device,
     dst->initialRefreshGraph();
 
     if (!doc->exportDocumentSync(url, mimefilter.toLatin1())) {
-        QMessageBox::warning(0,
+        QMessageBox::warning(qApp->activeWindow(),
                              i18nc("@title:window", "Krita"),
                              i18n("Could not save the layer. %1", doc->errorMessage().toUtf8().data()),
                              QMessageBox::Ok);
@@ -1239,10 +1227,17 @@ void KisNodeManager::saveNodeAsImage()
         return;
     }
 
-    KisImageWSP image = m_d->view->image();
+    KisPaintDeviceSP saveDevice = node->projection();
+
+    if (!saveDevice) {
+        m_d->view->showFloatingMessage(i18nc("warning message when trying to export a transform mask", "Layer has no pixel data"), QIcon());
+        return;
+    }
+
+    KisImageSP image = m_d->view->image();
     QRect saveRect = image->bounds() | node->exactBounds();
 
-    m_d->saveDeviceAsImage(node->projection(),
+    m_d->saveDeviceAsImage(saveDevice,
                            node->name(),
                            saveRect,
                            image->xRes(), image->yRes(),

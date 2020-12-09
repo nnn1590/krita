@@ -2,19 +2,7 @@
  *  Copyright (c) 2016 Eugene Ingerman geneing at gmail dot com
  *  Copyright (c) 2020 Dmitry Kazakov <dimula73@gmail.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "OverviewThumbnailStrokeStrategy.h"
@@ -42,11 +30,12 @@ public:
     QRect tileRect;
 };
 
-OverviewThumbnailStrokeStrategy::OverviewThumbnailStrokeStrategy(KisPaintDeviceSP device, const QRect& rect, const QSize& thumbnailSize)
+OverviewThumbnailStrokeStrategy::OverviewThumbnailStrokeStrategy(KisPaintDeviceSP device, const QRect& rect, const QSize& thumbnailSize, bool isPixelArt)
     : KisSimpleStrokeStrategy(QLatin1String("OverviewThumbnail")),
       m_device(device),
       m_rect(rect),
-      m_thumbnailSize(thumbnailSize)
+      m_thumbnailSize(thumbnailSize),
+      m_isPixelArt(isPixelArt)
 {
     enableJob(KisSimpleStrokeStrategy::JOB_INIT, true, KisStrokeJobData::BARRIER, KisStrokeJobData::EXCLUSIVE);
     enableJob(KisSimpleStrokeStrategy::JOB_DOSTROKE);
@@ -117,8 +106,11 @@ void OverviewThumbnailStrokeStrategy::finishStrokeCallback()
     QImage overviewImage;
 
     KoDummyUpdater updater;
-    KisTransformWorker worker(m_thumbnailDevice, 1 / oversample, 1 / oversample, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                              &updater, KisFilterStrategyRegistry::instance()->value("Bilinear"));
+    qreal xscale = m_thumbnailSize.width() / (qreal)m_thumbnailOversampledSize.width();
+    qreal yscale = m_thumbnailSize.height() / (qreal)m_thumbnailOversampledSize.height();
+    QString algorithm = m_isPixelArt ? "Box" : "Bilinear";
+    KisTransformWorker worker(m_thumbnailDevice, yscale, xscale, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                              &updater, KisFilterStrategyRegistry::instance()->value(algorithm));
     worker.run();
 
     overviewImage = m_thumbnailDevice->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile(),
