@@ -2,19 +2,7 @@
  *  Copyright (c) 2004 Boudewijn Rempt <boud@valdyas.org>
  *  Copyright (c) 2005 Bart Coppens <kde@bartcoppens.be>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "kis_imagepipe_brush.h"
 #include "kis_pipebrush_parasite.h"
@@ -144,10 +132,6 @@ protected:
         return brushIndex;
     }
 
-    int currentBrushIndex() override {
-        return m_currentBrushIndex;
-    }
-
     void updateBrushIndexes(const KisPaintInformation& info, int seqNo) override {
         for (int i = 0; i < m_parasite.dim; i++) {
             m_parasite.index[i] = selectPost(m_parasite.selection[i],
@@ -161,6 +145,10 @@ protected:
 public:
     using KisBrushesPipe<KisGbrBrush>::addBrush;
     using KisBrushesPipe<KisGbrBrush>::sizeBrush;
+
+    int currentBrushIndex() override {
+        return m_currentBrushIndex;
+    }
 
     void setParasite(const KisPipeBrushParasite& parasite) {
         m_parasite = parasite;
@@ -383,11 +371,6 @@ void KisImagePipeBrush::notifyStrokeStarted()
     d->brushesPipe.notifyStrokeStarted();
 }
 
-void KisImagePipeBrush::notifyCachedDabPainted(const KisPaintInformation& info)
-{
-    d->brushesPipe.notifyCachedDabPainted(info);
-}
-
 void KisImagePipeBrush::prepareForSeqNo(const KisPaintInformation &info, int seqNo)
 {
     d->brushesPipe.prepareForSeqNo(info, seqNo);
@@ -463,9 +446,9 @@ QString KisImagePipeBrush::defaultFileExtension() const
     return QString(".gih");
 }
 
-quint32 KisImagePipeBrush::brushIndex(const KisPaintInformation& info) const
+quint32 KisImagePipeBrush::brushIndex() const
 {
-    return d->brushesPipe.brushIndex(info);
+    return d->brushesPipe.currentBrushIndex();
 }
 
 qint32 KisImagePipeBrush::maskWidth(KisDabShape const& shape, double subPixelX, double subPixelY, const KisPaintInformation& info) const

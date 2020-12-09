@@ -2,20 +2,7 @@
  * Copyright (C) 1998, 1999 Torben Weis <weis@kde.org>
  * Copyright (C) 2012 Boudewijn Rempt <boud@valdyas.org>
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public License
- * along with this library; see the file COPYING.LIB.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * SPDX-License-Identifier: LGPL-2.0-or-later
  */
 
 #include "KisApplication.h"
@@ -254,21 +241,8 @@ void KisApplication::addResourceTypes()
     KoResourcePaths::addResourceType("kis_pics", "data", "/pics/");
     KoResourcePaths::addResourceType("kis_images", "data", "/images/");
     KoResourcePaths::addResourceType("metadata_schema", "data", "/metadata/schemas/");
-    KoResourcePaths::addResourceType(ResourceType::Brushes, "data", "/brushes/");
-    KoResourcePaths::addResourceType("kis_taskset", "data", "/taskset/");
-    KoResourcePaths::addResourceType("kis_taskset", "data", "/taskset/");
     KoResourcePaths::addResourceType("gmic_definitions", "data", "/gmic/");
-    KoResourcePaths::addResourceType("kis_resourcebundles", "data", "/bundles/");
     KoResourcePaths::addResourceType("kis_defaultpresets", "data", "/defaultpresets/");
-    KoResourcePaths::addResourceType(ResourceType::PaintOpPresets, "data", "/paintoppresets/");
-    KoResourcePaths::addResourceType(ResourceType::Workspaces, "data", "/workspaces/");
-    KoResourcePaths::addResourceType(ResourceType::WindowLayouts, "data", "/windowlayouts/");
-    KoResourcePaths::addResourceType(ResourceType::Sessions, "data", "/sessions/");
-    KoResourcePaths::addResourceType("psd_layer_style_collections", "data", "/asl");
-    KoResourcePaths::addResourceType(ResourceType::Patterns, "data", "/patterns/", true);
-    KoResourcePaths::addResourceType(ResourceType::Gradients, "data", "/gradients/");
-    KoResourcePaths::addResourceType(ResourceType::Gradients, "data", "/gradients/", true);
-    KoResourcePaths::addResourceType(ResourceType::Palettes, "data", "/palettes/", true);
     KoResourcePaths::addResourceType("kis_shortcuts", "data", "/shortcuts/");
     KoResourcePaths::addResourceType("kis_actions", "data", "/actions");
     KoResourcePaths::addResourceType("kis_actions", "data", "/pykrita");
@@ -278,60 +252,27 @@ void KisApplication::addResourceTypes()
     KoResourcePaths::addResourceType("tags", "data", "/tags/");
     KoResourcePaths::addResourceType("templates", "data", "/templates");
     KoResourcePaths::addResourceType("pythonscripts", "data", "/pykrita");
-    KoResourcePaths::addResourceType(ResourceType::Symbols, "data", "/symbols");
     KoResourcePaths::addResourceType("preset_icons", "data", "/preset_icons");
-    KoResourcePaths::addResourceType(ResourceType::GamutMasks, "data", "/gamutmasks/", true);
 #if defined HAVE_SEEXPR
     KoResourcePaths::addResourceType(ResourceType::SeExprScripts, "data", "/seexpr_scripts/", true);
 #endif
-
-    //    // Extra directories to look for create resources. (Does anyone actually use that anymore?)
-    //    KoResourcePaths::addResourceDir(ResourceType::Gradients, "/usr/share/create/gradients/gimp");
-    //    KoResourcePaths::addResourceDir(ResourceType::Gradients, QDir::homePath() + QString("/.create/gradients/gimp"));
-    //    KoResourcePaths::addResourceDir(ResourceType::Patterns, "/usr/share/create/patterns/gimp");
-    //    KoResourcePaths::addResourceDir(ResourceType::Patterns, QDir::homePath() + QString("/.create/patterns/gimp"));
-    //    KoResourcePaths::addResourceDir(ResourceType::Brushes, "/usr/share/create/brushes/gimp");
-    //    KoResourcePaths::addResourceDir(ResourceType::Brushes, QDir::homePath() + QString("/.create/brushes/gimp"));
-    //    KoResourcePaths::addResourceDir(ResourceType::Palettes, "/usr/share/create/swatches");
-    //    KoResourcePaths::addResourceDir(ResourceType::Palettes, QDir::homePath() + QString("/.create/swatches"));
-
     // Make directories for all resources we can save, and tags
     QDir d;
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/tags/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/asl/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/bundles/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/brushes/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/gradients/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/paintoppresets/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/palettes/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/patterns/");
-    // between 4.2.x and 4.3.0 there was a change from 'taskset' to 'tasksets'
-    // so to make older resource folders compatible with the new version, let's rename the folder
-    // so no tasksets are lost.
-    if (d.exists(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/taskset/")) {
-        d.rename(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/taskset/",
-                 QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/tasksets/");
-    }
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/tasksets/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/workspaces/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/input/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/pykrita/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/symbols/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/color-schemes/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/preset_icons/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/preset_icons/tool_icons/");
     d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/preset_icons/emblem_icons/");
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/gamutmasks/");
-#if defined HAVE_SEEXPR
-    d.mkpath(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/seexpr_scripts/");
-#endif
 }
 
 bool KisApplication::registerResources()
 {
     KisResourceLoaderRegistry *reg = KisResourceLoaderRegistry::instance();
 
-    reg->add(new KisResourceLoader<KisPaintOpPreset>(ResourceType::PaintOpPresets, ResourceType::PaintOpPresets, i18n("Brush presets"), QStringList() << "application/x-krita-paintoppreset"));
+    reg->add(new KisResourceLoader<KisPaintOpPreset>(ResourceSubType::KritaPaintOpPresets, ResourceType::PaintOpPresets, i18n("Brush presets"),
+                                                     QStringList() << "application/x-krita-paintoppreset"));
 
     reg->add(new KisResourceLoader<KisGbrBrush>(ResourceSubType::GbrBrushes, ResourceType::Brushes, i18n("Brush tips"), QStringList() << "image/x-gimp-brush"));
     reg->add(new KisResourceLoader<KisImagePipeBrush>(ResourceSubType::GihBrushes, ResourceType::Brushes, i18n("Brush tips"), QStringList() << "image/x-gimp-brush-animated"));
@@ -377,15 +318,15 @@ bool KisApplication::registerResources()
                                                      QStringList() << "application/x-photoshop-style"));
 
     if (!KisResourceCacheDb::initialize(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))) {
-        QMessageBox::critical(0, i18nc("@title:window", "Krita: Fatal error"), i18n("%1\n\nKrita will quit now.", KisResourceCacheDb::lastError()));
+        QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita: Fatal error"), i18n("%1\n\nKrita will quit now.", KisResourceCacheDb::lastError()));
         //return false;
     }
 
     KisResourceLocator::LocatorError r = KisResourceLocator::instance()->initialize(KoResourcePaths::getApplicationRoot() + "/share/krita");
     connect(KisResourceLocator::instance(), SIGNAL(progressMessage(const QString&)), this, SLOT(setSplashScreenLoadingText(const QString&)));
     if (r != KisResourceLocator::LocatorError::Ok && qApp->inherits("KisApplication")) {
-        QMessageBox::critical(0, i18nc("@title:window", "Krita: Fatal error"), KisResourceLocator::instance()->errorMessages().join('\n') + i18n("\n\nKrita will quit now."));
-        //return false;
+        QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita: Fatal error"), KisResourceLocator::instance()->errorMessages().join('\n') + i18n("\n\nKrita will quit now."));
+        return false;
     }
 
     return true;
@@ -423,7 +364,7 @@ bool KisApplication::start(const KisApplicationArguments &args)
 #ifdef ENV32BIT
 
     if (isWow64() && !cfg.readEntry("WarnedAbout32Bits", false)) {
-        QMessageBox::information(0,
+        QMessageBox::information(qApp->activeWindow(),
                                  i18nc("@title:window", "Krita: Warning"),
                                  i18n("You are running a 32 bits build on a 64 bits Windows.\n"
                                       "This is not recommended.\n"
@@ -467,6 +408,7 @@ bool KisApplication::start(const KisApplicationArguments &args)
     KConfigGroup group(KSharedConfig::openConfig(), "theme");
     Digikam::ThemeManager themeManager;
     themeManager.setCurrentTheme(group.readEntry("Theme", "Krita dark"));
+
 
     ResetStarting resetStarting(d->splashScreen, args.filenames().count()); // remove the splash when done
     Q_UNUSED(resetStarting);
@@ -678,18 +620,18 @@ bool KisApplication::start(const KisApplicationArguments &args)
                                     d->mainWindow->viewManager()->activeNode());
             }
             else{
-                QMessageBox::warning(nullptr, i18nc("@title:window", "Krita:Warning"),
+                QMessageBox::warning(qApp->activeWindow(), i18nc("@title:window", "Krita:Warning"),
                                             i18n("Cannot add %1 as a file layer: the file does not exist.", fileLayer->path()));
             }
         }
         else if (this->isRunning()){
-            QMessageBox::warning(nullptr, i18nc("@title:window", "Krita:Warning"),
+            QMessageBox::warning(qApp->activeWindow(), i18nc("@title:window", "Krita:Warning"),
                                 i18n("Cannot add the file layer: no document is open.\n\n"
 "You can create a new document using the --new-image option, or you can open an existing file.\n\n"
 "If you instead want to add the file layer to a document in an already running instance of Krita, check the \"Allow only one instance of Krita\" checkbox in the settings (Settings -> General -> Window)."));
         }
         else {
-            QMessageBox::warning(nullptr, i18nc("@title:window", "Krita: Warning"),
+            QMessageBox::warning(qApp->activeWindow(), i18nc("@title:window", "Krita: Warning"),
                                 i18n("Cannot add the file layer: no document is open.\n"
                                      "You can either create a new file using the --new-image option, or you can open an existing file."));
         }
@@ -927,10 +869,10 @@ bool KisApplication::createNewDocFromTemplate(const QString &fileName, KisMainWi
         }
 
         if (paths.isEmpty()) {
-            QMessageBox::critical(0, i18nc("@title:window", "Krita"),
+            QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita"),
                                   i18n("No template found for: %1", desktopName));
         } else if (paths.count() > 1) {
-            QMessageBox::critical(0, i18nc("@title:window", "Krita"),
+            QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita"),
                                   i18n("Too many templates found for: %1", desktopName));
         } else {
             templatePath = paths.at(0);
@@ -955,7 +897,7 @@ bool KisApplication::createNewDocFromTemplate(const QString &fileName, KisMainWi
             return true;
         }
         else {
-            QMessageBox::critical(0, i18nc("@title:window", "Krita"),
+            QMessageBox::critical(qApp->activeWindow(), i18nc("@title:window", "Krita"),
                                   i18n("Template %1 failed to load.", templateURL.toDisplayString()));
         }
     }
@@ -986,7 +928,7 @@ void KisApplication::resetConfig()
                 backupKritarcFile.remove();
             }
 
-            QMessageBox::information(0,
+            QMessageBox::information(qApp->activeWindow(),
                                  i18nc("@title:window", "Krita"),
                                  i18n("Krita configurations reset!\n\n"
                                       "Backup file was created at: %1\n\n"
@@ -1000,7 +942,7 @@ void KisApplication::resetConfig()
             kritarcFile.close();
         }
         else {
-            QMessageBox::warning(0,
+            QMessageBox::warning(qApp->activeWindow(),
                                  i18nc("@title:window", "Krita"),
                                  i18n("Failed to clear %1\n\n"
                                       "Please make sure no other program is using the file and try again.",
@@ -1028,7 +970,7 @@ void KisApplication::resetConfig()
 
 void KisApplication::askresetConfig()
 {
-    bool ok = QMessageBox::question(0,
+    bool ok = QMessageBox::question(qApp->activeWindow(),
                                     i18nc("@title:window", "Krita"),
                                     i18n("Do you want to clear the settings file?"),
                                     QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes;

@@ -8,19 +8,7 @@
  *  Copyright (c) 2010 José Luis Vergara Toloza <pentalis@gmail.com>
  *  Copyright (c) 2011 Silvio Heinrich <plassy@web.de>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_painter.h"
@@ -624,16 +612,20 @@ void KisPainter::bitBltWithFixedSelection(qint32 dstX, qint32 dstY,
 
         d->selection->projection()->readBytes(mergedSelectionBytes, dstX, dstY, srcWidth, srcHeight);
 
+        KoCompositeOp::ParameterInfo multiplyParamInfo;
+        multiplyParamInfo.opacity = 1.0f;
+        multiplyParamInfo.flow = 1.0f;
+
         // Merge selections here by multiplying them - compositeOP(COMPOSITE_MULT)
-        d->paramInfo.dstRowStart   = mergedSelectionBytes;
-        d->paramInfo.dstRowStride  = srcWidth * selection->pixelSize();
-        d->paramInfo.srcRowStart   = selRowStart;
-        d->paramInfo.srcRowStride  = selBounds.width() * selection->pixelSize();
-        d->paramInfo.maskRowStart  = 0;
-        d->paramInfo.maskRowStride = 0;
-        d->paramInfo.rows          = srcHeight;
-        d->paramInfo.cols          = srcWidth;
-        KoColorSpaceRegistry::instance()->alpha8()->compositeOp(COMPOSITE_MULT)->composite(d->paramInfo);
+        multiplyParamInfo.dstRowStart   = mergedSelectionBytes;
+        multiplyParamInfo.dstRowStride  = srcWidth * selection->pixelSize();
+        multiplyParamInfo.srcRowStart   = selRowStart;
+        multiplyParamInfo.srcRowStride  = selBounds.width() * selection->pixelSize();
+        multiplyParamInfo.maskRowStart  = 0;
+        multiplyParamInfo.maskRowStride = 0;
+        multiplyParamInfo.rows          = srcHeight;
+        multiplyParamInfo.cols          = srcWidth;
+        KoColorSpaceRegistry::instance()->alpha8()->compositeOp(COMPOSITE_MULT)->composite(multiplyParamInfo);
 
         // Blit to dstBytes (intermediary bit array)
         d->paramInfo.dstRowStart   = dstBytes;
@@ -642,6 +634,8 @@ void KisPainter::bitBltWithFixedSelection(qint32 dstX, qint32 dstY,
         d->paramInfo.srcRowStride  = srcWidth * srcDev->pixelSize();
         d->paramInfo.maskRowStart  = mergedSelectionBytes;
         d->paramInfo.maskRowStride = srcWidth * selection->pixelSize();
+        d->paramInfo.rows          = srcHeight;
+        d->paramInfo.cols          = srcWidth;
         d->colorSpace->bitBlt(srcDev->colorSpace(), d->paramInfo, d->compositeOp, d->renderingIntent, d->conversionFlags);
         delete[] mergedSelectionBytes;
     }
@@ -1101,16 +1095,20 @@ void KisPainter::bltFixedWithFixedSelection(qint32 dstX, qint32 dstY,
         }
         d->selection->projection()->readBytes(mergedSelectionBytes, dstX, dstY, srcWidth, srcHeight);
 
+        KoCompositeOp::ParameterInfo multiplyParamInfo;
+        multiplyParamInfo.opacity = 1.0f;
+        multiplyParamInfo.flow = 1.0f;
+
         // Merge selections here by multiplying them - compositeOp(COMPOSITE_MULT)
-        d->paramInfo.dstRowStart   = mergedSelectionBytes;
-        d->paramInfo.dstRowStride  = srcWidth * selection->pixelSize();
-        d->paramInfo.srcRowStart   = selRowStart;
-        d->paramInfo.srcRowStride  = selBounds.width() * selection->pixelSize();
-        d->paramInfo.maskRowStart  = 0;
-        d->paramInfo.maskRowStride = 0;
-        d->paramInfo.rows          = srcHeight;
-        d->paramInfo.cols          = srcWidth;
-        KoColorSpaceRegistry::instance()->alpha8()->compositeOp(COMPOSITE_MULT)->composite(d->paramInfo);
+        multiplyParamInfo.dstRowStart   = mergedSelectionBytes;
+        multiplyParamInfo.dstRowStride  = srcWidth * selection->pixelSize();
+        multiplyParamInfo.srcRowStart   = selRowStart;
+        multiplyParamInfo.srcRowStride  = selBounds.width() * selection->pixelSize();
+        multiplyParamInfo.maskRowStart  = 0;
+        multiplyParamInfo.maskRowStride = 0;
+        multiplyParamInfo.rows          = srcHeight;
+        multiplyParamInfo.cols          = srcWidth;
+        KoColorSpaceRegistry::instance()->alpha8()->compositeOp(COMPOSITE_MULT)->composite(multiplyParamInfo);
 
         // Blit to dstBytes (intermediary bit array)
         d->paramInfo.dstRowStart   = dstBytes;
@@ -1119,6 +1117,8 @@ void KisPainter::bltFixedWithFixedSelection(qint32 dstX, qint32 dstY,
         d->paramInfo.srcRowStride  = srcBounds.width() * srcDev->pixelSize();
         d->paramInfo.maskRowStart  = mergedSelectionBytes;
         d->paramInfo.maskRowStride = srcWidth * selection->pixelSize();
+        d->paramInfo.rows          = srcHeight;
+        d->paramInfo.cols          = srcWidth;
         d->colorSpace->bitBlt(srcDev->colorSpace(), d->paramInfo, d->compositeOp, d->renderingIntent, d->conversionFlags);
 
         delete[] mergedSelectionBytes;

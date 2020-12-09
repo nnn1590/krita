@@ -4,19 +4,7 @@
  *  Copyright (c) 1999 Michael Koch <koch@kde.org>
  *  Copyright (c) 2003-2011 Boudewijn Rempt <boud@valdyas.org>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_dlg_preferences.h"
@@ -47,6 +35,8 @@
 #include <QToolButton>
 #include <QStyleFactory>
 #include <QScreen>
+#include <QFontComboBox>
+#include <QFont>
 
 #include <KisApplication.h>
 #include <KisDocument.h>
@@ -197,6 +187,28 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
     //
     // Window Tab
     //
+    chkUseCustomFont->setChecked(cfg.readEntry<bool>("use_custom_system_font", false));
+    cmbCustomFont->setEnabled(cfg.readEntry<bool>("use_custom_system_font", false));
+    cmbCustomFont->findChild <QComboBox*>("stylesComboBox")->setVisible(false);
+    intFontSize->setEnabled(cmbCustomFont->isEnabled());
+
+    QString fontName = cfg.readEntry<QString>("custom_system_font", "");
+    if (fontName.isEmpty()) {
+        cmbCustomFont->setCurrentFont(qApp->font());
+
+    }
+    else {
+        int pointSize = qApp->font().pointSize();
+        cmbCustomFont->setCurrentFont(QFont(fontName, pointSize));
+    }
+    int fontSize = cfg.readEntry<int>("custom_font_size", -1);
+    if (fontSize < 0) {
+        intFontSize->setValue(qApp->font().pointSize());
+    }
+    else {
+        intFontSize->setValue(fontSize);
+    }
+
     m_cmbMDIType->setCurrentIndex(cfg.readEntry<int>("mdi_viewmode", (int)QMdiArea::TabbedView));
 
     m_backgroundimage->setText(cfg.getMDIBackgroundImage());
@@ -286,6 +298,9 @@ GeneralTab::GeneralTab(QWidget *_parent, const char *_name)
 
     KConfigGroup group = KSharedConfig::openConfig()->group("File Dialogs");
     bool dontUseNative = true;
+#ifdef Q_OS_ANDROID
+    dontUseNative = false;
+#endif
 #ifdef Q_OS_UNIX
     if (qgetenv("XDG_CURRENT_DESKTOP") == "KDE") {
         dontUseNative = false;
@@ -335,6 +350,11 @@ void GeneralTab::setDefault()
     m_chkNativeFileDialog->setChecked(false);
     intMaxBrushSize->setValue(1000);
 
+    chkUseCustomFont->setChecked(false);
+    cmbCustomFont->setCurrentFont(qApp->font());
+    intFontSize->setValue(qApp->font().pointSize());
+
+        
     m_cmbMDIType->setCurrentIndex((int)QMdiArea::TabbedView);
     m_chkRubberBand->setChecked(cfg.useOpenGL(true));
     m_favoritePresetsSpinBox->setValue(cfg.favoritePresets(true));
@@ -919,6 +939,10 @@ PerformanceTab::PerformanceTab(QWidget *parent, const char *name)
     intMemoryLimit->setMinimumWidth(80);
     intPoolLimit->setMinimumWidth(80);
     intUndoLimit->setMinimumWidth(80);
+
+    label_5->setVisible(false);
+    sliderPoolLimit->setVisible(false);
+    intPoolLimit->setVisible(false);
 
 
     SliderAndSpinBoxSync *sync1 =
@@ -1700,6 +1724,16 @@ bool KisDlgPreferences::editPreferences()
         group.writeEntry("DontUseNativeFileDialog", !m_general->m_chkNativeFileDialog->isChecked());
 
         cfg.writeEntry<int>("maximumBrushSize", m_general->intMaxBrushSize->value());
+
+        cfg.writeEntry<bool>("use_custom_system_font", m_general->chkUseCustomFont->isChecked());
+        if (m_general->chkUseCustomFont->isChecked()) {
+            cfg.writeEntry<QString>("custom_system_font", m_general->cmbCustomFont->currentFont().family());
+            cfg.writeEntry<int>("custom_font_size", m_general->intFontSize->value());
+        }
+        else {
+            cfg.writeEntry<QString>("custom_system_font", "");
+            cfg.writeEntry<int>("custom_font_size", -1);
+        }
 
         cfg.writeEntry<int>("mdi_viewmode", m_general->mdiMode());
         cfg.setMDIBackgroundColor(m_general->m_mdiColor->color().toXML());

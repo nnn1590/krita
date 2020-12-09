@@ -1,19 +1,7 @@
 /*
  *  Copyright (c) 2007 Boudewijn Rempt boud@valdyas.org
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_kra_saver_test.h"
@@ -51,6 +39,7 @@
 #include <KisGlobalResourcesInterface.h>
 
 #include "kis_transform_mask_params_interface.h"
+#include "StoryboardItem.h"
 
 #include <generator/kis_generator_registry.h>
 
@@ -282,7 +271,7 @@ void KisKraSaverTest::testRoundTripAnimation()
     KUndo2Command parentCommand;
 
     layer1->enableAnimation();
-    KisKeyframeChannel *rasterChannel = layer1->getKeyframeChannel(KisKeyframeChannel::Content.id(), true);
+    KisKeyframeChannel *rasterChannel = layer1->getKeyframeChannel(KisKeyframeChannel::Raster.id(), true);
     QVERIFY(rasterChannel);
 
     rasterChannel->addKeyframe(10, &parentCommand);
@@ -315,7 +304,7 @@ void KisKraSaverTest::testRoundTripAnimation()
     cs = layer2->paintDevice()->colorSpace();
 
     QCOMPARE(image2->animationInterface()->currentTime(), 20);
-    KisKeyframeChannel *channel = layer2->getKeyframeChannel(KisKeyframeChannel::Content.id());
+    KisKeyframeChannel *channel = layer2->getKeyframeChannel(KisKeyframeChannel::Raster.id());
     QVERIFY(channel);
     QCOMPARE(channel->keyframeCount(), 3);
 
@@ -388,8 +377,9 @@ void KisKraSaverTest::testRoundTripColorizeMask()
         // KIS_DUMP_DEVICE_2(key3, refRect, "key3", "dd");
     }
 
-    KisLayerPropertiesIcons::setNodeProperty(mask, KisLayerPropertiesIcons::colorizeEditKeyStrokes, false, image);
-    KisLayerPropertiesIcons::setNodeProperty(mask, KisLayerPropertiesIcons::colorizeShowColoring, false, image);
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(mask, KisLayerPropertiesIcons::colorizeEditKeyStrokes, false, image);
+    KisLayerPropertiesIcons::setNodePropertyAutoUndo(mask, KisLayerPropertiesIcons::colorizeShowColoring, false, image);
+    image->waitForDone();
 
 
 
@@ -544,6 +534,36 @@ void KisKraSaverTest::testRoundTripShapeSelection()
     QVERIFY(chk.testPassed());
 }
 
+
+void KisKraSaverTest::testRoundTripStoryboard()
+{
+    const KoColorSpace * cs = KoColorSpaceRegistry::instance()->rgb8();
+    QRect imageRect(0,0,512,512);
+
+    QScopedPointer<KisDocument> doc(KisPart::instance()->createDocument());
+    KisImageSP image = new KisImage(new KisSurrogateUndoStore(), imageRect.width(), imageRect.height(), cs, "test image");
+    doc->setCurrentImage(image);
+
+    // TODO: make initialization of StoryboardItem more fool-proof
+    StoryboardItemSP item(new StoryboardItem());
+    item->appendChild(QVariant::fromValue(ThumbnailData()));
+    item->appendChild("scene0");
+    item->appendChild(10);
+    item->appendChild(2);
+
+    StoryboardItemList list;
+    list.append(item);
+
+    doc->setStoryboardItemList(list);
+    bool result = doc->exportDocumentSync(QUrl::fromLocalFile("storyboardroundtriptest.kra"), doc->mimeType());
+    QVERIFY(result);
+
+    QScopedPointer<KisDocument> doc2(KisPart::instance()->createDocument());
+    result = doc2->loadNativeFormat("storyboardroundtriptest.kra");
+    QVERIFY(result);
+
+    QCOMPARE(doc2->getStoryboardItemList().count(), list.count());
+}
 
 void KisKraSaverTest::testExportToReadonly()
 {

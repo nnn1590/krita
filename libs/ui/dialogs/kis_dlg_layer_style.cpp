@@ -1,19 +1,7 @@
 /*
  *  Copyright (c) 2014 Boudewijn Rempt <boud@valdyas.org>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "kis_dlg_layer_style.h"
 
@@ -511,9 +499,9 @@ bool StylesSelector::LocationProxyModel::filterAcceptsRow(int source_row, const 
     }
 
     QModelIndex idx = sourceModel()->index(source_row, 0);
-    QString location = sourceModel()->data(idx, Qt::UserRole + KisResourceModel::Location).toString();
-    qDebug() << sourceModel()->data(idx, Qt::UserRole + KisResourceModel::Location).toString()
-             << sourceModel()->data(idx, Qt::UserRole + KisResourceModel::Name).toString();
+    QString location = sourceModel()->data(idx, Qt::UserRole + KisAbstractResourceModel::Location).toString();
+    qDebug() << sourceModel()->data(idx, Qt::UserRole + KisAbstractResourceModel::Location).toString()
+             << sourceModel()->data(idx, Qt::UserRole + KisAbstractResourceModel::Name).toString();
     return location == m_locationToFilter;
 }
 
@@ -539,13 +527,13 @@ StylesSelector::StylesSelector(QWidget *parent)
     ui.setupUi(this);
 
     //ui.cmbStyleCollections->setModel();
-    m_resourceModel = KisResourceModelProvider::resourceModel(ResourceType::LayerStyles);
+    m_resourceModel = new KisResourceModel(ResourceType::LayerStyles, this);
     m_locationsProxyModel = new LocationProxyModel(this);
     m_locationsProxyModel->setSourceModel(m_resourceModel);
     m_locationsProxyModel->setEnableFiltering(false);
 
     ui.listStyles->setModel(m_locationsProxyModel);
-    ui.listStyles->setModelColumn(KisResourceModel::Name);
+    ui.listStyles->setModelColumn(KisAbstractResourceModel::Name);
 
     connect(ui.cmbStyleCollections, SIGNAL(activated(QString)), this, SLOT(loadStyles(QString)));
     connect(ui.listStyles, SIGNAL(clicked(QModelIndex)), this, SLOT(selectStyle(QModelIndex)));
@@ -565,7 +553,7 @@ void StylesSelector::refillCollections()
     QStringList locationsList;
     for (int i = 0; i < m_resourceModel->rowCount(); i++) {
         QModelIndex idx = m_resourceModel->index(i, 0);
-        QString location = m_resourceModel->data(idx, Qt::UserRole + KisResourceModel::Location).toString();
+        QString location = m_resourceModel->data(idx, Qt::UserRole + KisAbstractResourceModel::Location).toString();
         if (!locationsList.contains(location)) {
             locationsList << location;
         }

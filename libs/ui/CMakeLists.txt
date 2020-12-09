@@ -159,6 +159,7 @@ set(kritaui_LIB_SRCS
     kis_stopgradient_editor.cpp
     KisWelcomePageWidget.cpp
     KisChangeCloneLayersCommand.cpp
+    KisGenericGradientEditor.cpp
 
     kisexiv2/kis_exif_io.cpp
     kisexiv2/kis_exiv2.cpp
@@ -414,9 +415,11 @@ set(kritaui_LIB_SRCS
 
     KoDocumentInfoDlg.cpp
     KoDocumentInfo.cpp
+
+    StoryboardItem.cpp
 )
 
-if (SeExpr2_FOUND)
+if (KSeExpr_FOUND)
     set(kritaui_LIB_SRCS ${kritaui_LIB_SRCS}
         widgets/kis_seexpr_script_chooser.cpp
     )

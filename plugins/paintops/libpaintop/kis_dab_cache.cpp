@@ -1,19 +1,7 @@
 /*
  *  Copyright (c) 2012 Dmitry Kazakov <dimula73@gmail.com>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_dab_cache.h"
@@ -33,6 +21,8 @@ struct KisDabCache::Private {
     Private(KisBrushSP brush)
         : brush(brush)
     {}
+
+    int seqNo = 0;
 
     KisFixedPaintDeviceSP dab;
     KisFixedPaintDeviceSP dabOriginal;
@@ -88,7 +78,8 @@ KisFixedPaintDeviceSP KisDabCache::fetchDab(const KoColorSpace *cs,
                           shape,
                           info,
                           softnessFactor,
-                          dstDabRect);
+                          dstDabRect,
+                          lightnessStrength);
 }
 
 KisFixedPaintDeviceSP KisDabCache::fetchDab(const KoColorSpace *cs,
@@ -123,7 +114,6 @@ KisFixedPaintDeviceSP KisDabCache::fetchFromCache(KisDabCacheUtils::DabRendering
         *dstDabRect = KisDabCacheUtils::correctDabRectWhenFetchedFromCache(*dstDabRect, m_d->dab->bounds().size());
     }
 
-    resources->brush->notifyCachedDabPainted(info);
     return m_d->dab;
 }
 
@@ -165,6 +155,11 @@ KisFixedPaintDeviceSP KisDabCache::fetchDabCommon(const KoColorSpace *cs,
 
     using namespace KisDabCacheUtils;
 
+    // 0. Notify brush that we ar going to paint a new dab
+
+    m_d->brush->prepareForSeqNo(info, m_d->seqNo);
+    m_d->seqNo++;
+
     // 1. Calculate new dab parameters and whether we can reuse the cache
 
     TemporaryResourcesWithoutOwning resources;
@@ -188,7 +183,8 @@ KisFixedPaintDeviceSP KisDabCache::fetchDabCommon(const KoColorSpace *cs,
                                cursorPoint,
                                shape,
                                info,
-                               softnessFactor),
+                               softnessFactor,
+                               lightnessStrength),
                            &di,
                            &shouldUseCache);
 

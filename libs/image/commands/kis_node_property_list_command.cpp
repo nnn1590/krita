@@ -1,19 +1,7 @@
 /*
  *  Copyright (c) 2009 Cyrille Berger <cberger@cberger.net>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <klocalizedstring.h>
@@ -194,45 +182,17 @@ void KisNodePropertyListCommand::doUpdate(const KisBaseNode::PropertyList &oldPr
     }
 }
 
-void KisNodePropertyListCommand::setNodePropertiesNoUndo(KisNodeSP node, KisImageSP image, PropertyList proplist)
+void KisNodePropertyListCommand::setNodePropertiesAutoUndo(KisNodeSP node, KisImageSP image, PropertyList proplist)
 {
-    bool undo = false;
+    QSet<QString> changedProps = changedProperties(node->sectionModelProperties(),
+                                                         proplist);
 
-
-    Q_FOREACH (const KisBaseNode::Property &prop, proplist) {
-
-        if (prop.name == i18n("Visible") && node->visible() != prop.state.toBool()) {
-            continue;
-        }
-        else if (prop.name == i18n("Locked") && node->userLocked() != prop.state.toBool()) {
-            continue;
-        }
-        else if (prop.name == i18n("Active")) {
-            if (KisSelectionMask *m = dynamic_cast<KisSelectionMask*>(node.data())) {
-                if (m->active() != prop.state.toBool()) {
-                    continue;
-                }
-            }
-        }
-        else if (prop.name == i18n("Alpha Locked")) {
-            if (KisPaintLayer* l = dynamic_cast<KisPaintLayer*>(node.data())) {
-                if (l->alphaLocked() != prop.state.toBool()) {
-                    continue;
-                }
-            }
-        }
-
-        // This property is known, but it hasn't got the same value, and it isn't one of
-        // the previous properties, so we need to add the command to the undo list.
-        Q_FOREACH(const KisBaseNode::Property &p2, node->sectionModelProperties()) {
-            if (p2.name == prop.name && p2.state != prop.state) {
-                undo |= true;
-                break;
-            }
-        }
-
-
-    }
+    changedProps.remove(KisLayerPropertiesIcons::visible.id());
+    changedProps.remove(KisLayerPropertiesIcons::locked.id());
+    changedProps.remove(KisLayerPropertiesIcons::selectionActive.id());
+    changedProps.remove(KisLayerPropertiesIcons::alphaLocked.id());
+    changedProps.remove(KisLayerPropertiesIcons::colorizeNeedsUpdate.id());
+    const bool undo = !changedProps.isEmpty();
 
     QScopedPointer<KUndo2Command> cmd(new KisNodePropertyListCommand(node, proplist));
 

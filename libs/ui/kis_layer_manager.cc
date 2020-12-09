@@ -2,19 +2,7 @@
  *  Copyright (C) 2006 Boudewijn Rempt <boud@valdyas.org>
  *  Copyright (c) 2020 L. E. Segovia <amy@amyspark.me>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "kis_layer_manager.h"
@@ -290,11 +278,10 @@ void KisLayerManager::layerProperties()
         Q_ASSERT(configBefore);
 
         KisDlgGeneratorLayer *dlg = new KisDlgGeneratorLayer(generatorLayer->name(), m_view, m_view->mainWindow(), generatorLayer, configBefore, KisStrokeId());
-        dlg->setCaption(i18n("Fill Layer Properties"));
+        dlg->setWindowTitle(i18n("Fill Layer Properties"));
         dlg->setAttribute(Qt::WA_DeleteOnClose);
 
         dlg->setConfiguration(configBefore.data());
-        dlg->resize(dlg->minimumSizeHint());
 
         Qt::WindowFlags flags = dlg->windowFlags();
         dlg->setWindowFlags(flags | Qt::Tool | Qt::Dialog);
@@ -432,12 +419,12 @@ void KisLayerManager::convertNodeToPaintLayer(KisNodeSP source)
                                          clone);
 
     if (srcDevice->framesInterface()) {
-        KisKeyframeChannel *cloneKeyChannel = layer->getKeyframeChannel(KisKeyframeChannel::Content.id(), true);
+        KisKeyframeChannel *cloneKeyChannel = layer->getKeyframeChannel(KisKeyframeChannel::Raster.id(), true);
         layer->enableAnimation();
         KisKeyframeChannel *sourceKeyChannel = srcDevice->keyframeChannel();
 
-        foreach (const int &index, sourceKeyChannel->allKeyframeIds()) {
-            cloneKeyChannel->copyExternalKeyframe(sourceKeyChannel, index, index);
+        foreach (const int &index, sourceKeyChannel->allKeyframeTimes()) {
+            KisKeyframeChannel::copyKeyframe(sourceKeyChannel, index, cloneKeyChannel, index);
         }
     }
 
@@ -471,7 +458,7 @@ void KisLayerManager::convertGroupToAnimated()
     KisPaintLayerSP animatedLayer = new KisPaintLayer(m_view->image(), group->name(), OPACITY_OPAQUE_U8);
     animatedLayer->enableAnimation();
     KisRasterKeyframeChannel *contentChannel = dynamic_cast<KisRasterKeyframeChannel*>(
-                animatedLayer->getKeyframeChannel(KisKeyframeChannel::Content.id(), true));
+                animatedLayer->getKeyframeChannel(KisKeyframeChannel::Raster.id(), true));
     KIS_ASSERT_RECOVER_RETURN(contentChannel);
 
     KisNodeSP child = group->firstChild();
@@ -737,7 +724,6 @@ KisNodeSP KisLayerManager::addGeneratorLayer(KisNodeSP activeNode)
     KisFilterConfigurationSP defaultConfig = dlg.configuration();
     defaultConfig->setProperty("color", currentForeground);
     dlg.setConfiguration(defaultConfig);
-    dlg.resize(dlg.minimumSizeHint());
 
     if (dlg.exec() == QDialog::Accepted) {
         node->setName(dlg.layerName());
