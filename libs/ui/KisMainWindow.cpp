@@ -1,8 +1,8 @@
 /* This file is part of the KDE project
-   Copyright (C) 1998, 1999 Torben Weis <weis@kde.org>
-   Copyright (C) 2000-2006 David Faure <faure@kde.org>
-   Copyright (C) 2007, 2009 Thomas zander <zander@kde.org>
-   Copyright (C) 2010 Benjamin Port <port.benjamin@gmail.com>
+   SPDX-FileCopyrightText: 1998, 1999 Torben Weis <weis@kde.org>
+   SPDX-FileCopyrightText: 2000-2006 David Faure <faure@kde.org>
+   SPDX-FileCopyrightText: 2007, 2009 Thomas zander <zander@kde.org>
+   SPDX-FileCopyrightText: 2010 Benjamin Port <port.benjamin@gmail.com>
 
    SPDX-License-Identifier: LGPL-2.0-or-later
 */
@@ -363,7 +363,6 @@ KisMainWindow::KisMainWindow(QUuid uuid)
 
     KoToolBoxFactory toolBoxFactory;
     QDockWidget *toolbox = createDockWidget(&toolBoxFactory);
-    toolbox->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetClosable);
 
     KisConfig cfg(true);
     if (cfg.toolOptionsInDocker()) {
@@ -1500,12 +1499,11 @@ void KisMainWindow::saveWindowSettings()
         KConfigGroup group = d->windowStateConfig;
         saveMainWindowSettings(group);
 
-        // Save collapsible state of dock widgets
+        // Save state of dock widgets
         for (QMap<QString, QDockWidget*>::const_iterator i = d->dockWidgetsMap.constBegin();
              i != d->dockWidgetsMap.constEnd(); ++i) {
             if (i.value()->widget()) {
                 KConfigGroup dockGroup = group.group(QString("DockWidget ") + i.key());
-                dockGroup.writeEntry("Collapsed", i.value()->widget()->isHidden());
                 dockGroup.writeEntry("Locked", i.value()->property("Locked").toBool());
                 dockGroup.writeEntry("DockArea", (int) dockWidgetArea(i.value()));
                 dockGroup.writeEntry("xPosition", (int) i.value()->widget()->x());
@@ -1795,8 +1793,7 @@ bool KisMainWindow::restoreWorkspace(int workspaceId)
     const bool showTitlebars = KisConfig(false).showDockerTitleBars();
     Q_FOREACH (QDockWidget *dock, dockWidgets()) {
         if (dock->titleBarWidget()) {
-            const bool isCollapsed = (dock->widget() && dock->widget()->isHidden()) || !dock->widget();
-            dock->titleBarWidget()->setVisible(showTitlebars || (dock->isFloating() && isCollapsed));
+            dock->titleBarWidget()->setVisible(showTitlebars || dock->isFloating());
         }
     }
 
@@ -2050,7 +2047,6 @@ QDockWidget* KisMainWindow::createDockWidget(KoDockFactoryBase* factory)
         if (!dockWidget->titleBarWidget() && factory->id() != "TimelineDocker") {
             titleBar = new KoDockWidgetTitleBar(dockWidget);
             dockWidget->setTitleBarWidget(titleBar);
-            titleBar->setCollapsable(false);
         }
         if (titleBar) {
             titleBar->setFont(KoDockRegistry::dockFont());
@@ -2098,12 +2094,10 @@ QDockWidget* KisMainWindow::createDockWidget(KoDockFactoryBase* factory)
             dockWidget->hide();
         }
 
-        bool locked = false;
-        group =  KSharedConfig::openConfig()->group("krita").group("DockWidget " + factory->id());
-        locked = group.readEntry("Locked", locked);
-
-        if (titleBar && locked)
+        bool locked = group.readEntry("Locked", false);
+        if (titleBar && locked) {
             titleBar->setLocked(true);
+        }
 
         d->dockWidgetsMap.insert(factory->id(), dockWidget);
     }
@@ -2833,8 +2827,7 @@ void KisMainWindow::showDockerTitleBars(bool show)
 {
     Q_FOREACH (QDockWidget *dock, dockWidgets()) {
         if (dock->titleBarWidget()) {
-            const bool isCollapsed = (dock->widget() && dock->widget()->isHidden()) || !dock->widget();
-            dock->titleBarWidget()->setVisible(show || (dock->isFloating() && isCollapsed));
+            dock->titleBarWidget()->setVisible(show || dock->isFloating());
         }
     }
 

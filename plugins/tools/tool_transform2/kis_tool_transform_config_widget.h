@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2013 Dmitry Kazakov <dimula73@gmail.com>
+ *  SPDX-FileCopyrightText: 2013 Dmitry Kazakov <dimula73@gmail.com>
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -108,6 +108,7 @@ public Q_SLOTS:
 
     void slotMeshSizeChanged();
     void slotMeshShowHandlesChanged();
+    void slotMeshSymmetricalHandlesChanged();
 
 private:
 

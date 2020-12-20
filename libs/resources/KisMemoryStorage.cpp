@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Boudewijn Rempt <boud@valdyas.org>
+ * SPDX-FileCopyrightText: 2018 Boudewijn Rempt <boud@valdyas.org>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -39,6 +39,7 @@ public:
     QString url() const override { return tag() ? tag()->url() : QString(); }
     QString name() const override { return tag() ? tag()->name() : QString(); }
     QString comment() const override {return tag() ? tag()->comment() : QString(); }
+    QString resourceType() const override { return  tag() ? tag()->resourceType() : resourceType(); }
 
     KisTagSP tag() const override
     {
@@ -199,10 +200,12 @@ KisResourceStorage::ResourceItem KisMemoryStorage::resourceItem(const QString &u
 KoResourceSP KisMemoryStorage::resource(const QString &url)
 {
     KoResourceSP resource;
-    QFileInfo fi(location() + '/' + url);
-    const QString resourceType = fi.path().split("/").last();
+
+    QStringList splitUrl = url.split("/");
+    const QString resourceType = splitUrl.first();
+    const QString resourceFilename = splitUrl.last();
     Q_FOREACH(resource, d->resources[resourceType]) {
-        if (resource->filename() == url) {
+        if (resource->filename() == resourceFilename) {
             break;
         }
     }
