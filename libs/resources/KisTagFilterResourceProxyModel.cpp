@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Boudewijn Rempt <boud@valdyas.org>
+ * SPDX-FileCopyrightText: 2018 Boudewijn Rempt <boud@valdyas.org>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -68,9 +68,14 @@ KoResourceSP KisTagFilterResourceProxyModel::resourceForIndex(QModelIndex index)
 
 QModelIndex KisTagFilterResourceProxyModel::indexForResource(KoResourceSP resource) const
 {
-    KisAbstractResourceModel *source = dynamic_cast<KisAbstractResourceModel*>(sourceModel());
-    if (source) {
-        return mapFromSource(source->indexForResource(resource));
+    if (!resource || !resource->valid() || resource->resourceId() < 0) return QModelIndex();
+
+    for (int i = 0; i < rowCount(); ++i)  {
+        QModelIndex idx = index(i, 0);
+        Q_ASSERT(idx.isValid());
+        if (idx.data() == resource->resourceId()) {
+            return idx;
+        }
     }
     return QModelIndex();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 boud <boud@valdyas.org>
+ * SPDX-FileCopyrightText: 2018 boud <boud@valdyas.org>
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -292,6 +292,7 @@ void TestTagModel::testAddTagWithResources()
     tag->setComment("A tag for testing");
     tag->setValid(true);
     tag->setActive(true);
+    tag->setResourceType("paintoppresets");
 
     tagModel.addTag(tag, {resource});
     QVERIFY(tag->id() >= 0);

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020 Dmitry Kazakov <dimula73@gmail.com>
+ *  SPDX-FileCopyrightText: 2020 Dmitry Kazakov <dimula73@gmail.com>
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -119,12 +119,13 @@ void KisMeshTransformStrategy::setTransformFunction(const QPointF &mousePos, boo
     QPointF localPatchPos;
     qreal localSegmentPos = 0.0;
 
+    const bool symmetricalMode = shiftModifierActive ^ m_d->currentArgs.meshSymmetricalHandles();
 
     if (m_d->currentArgs.meshShowHandles()) {
         auto index = m_d->currentArgs.meshTransform()->hitTestControlPoint(mousePos, grabRadius);
         if (m_d->currentArgs.meshTransform()->isIndexValid(index)) {
             hoveredControl = index;
-            mode = !shiftModifierActive ? Private::OVER_POINT_SYMMETRIC : Private::OVER_POINT;
+            mode = symmetricalMode ? Private::OVER_POINT_SYMMETRIC : Private::OVER_POINT;
         }
     }
 
@@ -144,7 +145,7 @@ void KisMeshTransformStrategy::setTransformFunction(const QPointF &mousePos, boo
         auto index = m_d->currentArgs.meshTransform()->hitTestSegment(mousePos, grabRadius, &localSegmentPos);
         if (m_d->currentArgs.meshTransform()->isIndexValid(index)) {
             hoveredSegment = index;
-            mode = !shiftModifierActive ? Private::OVER_SEGMENT_SYMMETRIC : Private::OVER_SEGMENT;
+            mode = symmetricalMode ? Private::OVER_SEGMENT_SYMMETRIC : Private::OVER_SEGMENT;
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Boudewijn Rempt <boud@valdyas.org>
+ * SPDX-FileCopyrightText: 2016 Boudewijn Rempt <boud@valdyas.org>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -137,6 +137,10 @@ QVector<StoryboardComment> KraConverter::storyboardCommentList()
 
 KisImportExportErrorCode KraConverter::buildFile(QIODevice *io, const QString &filename)
 {
+    if (m_image->size().isEmpty()) {
+        return ImportExportCodes::Failure;
+    }
+    
     setProgress(5);
     m_store = KoStore::createStore(io, KoStore::Write, m_doc->nativeFormatMimeType(), KoStore::Zip);
 

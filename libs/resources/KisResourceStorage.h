@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Boudewijn Rempt <boud@valdyas.org>
+ * SPDX-FileCopyrightText: 2018 Boudewijn Rempt <boud@valdyas.org>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -76,6 +76,9 @@ public:
         virtual QString name() const = 0;
         /// An extra, optional comment for the tag
         virtual QString comment() const = 0;
+        /// The resource type as defined in the tag file
+        virtual QString resourceType() const = 0;
+
 
         /// A tag object on which we can set properties and which we can save
         virtual KisTagSP tag() const = 0;
