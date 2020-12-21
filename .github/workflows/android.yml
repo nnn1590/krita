@@ -64,7 +64,7 @@ jobs:
         . envsetup.sh
         find krita -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
         find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android#g'
-        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g' -e 's/org\.krita\.R/org\.nnn1590\.krita\.R/g'
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
@@ -216,7 +216,7 @@ jobs:
         . envsetup.sh
         find krita -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
         find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android#g'
-        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g' -e 's/org\.krita\.R/org\.nnn1590\.krita\.R/g'
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
@@ -368,7 +368,7 @@ jobs:
         . envsetup.sh
         find krita -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
         find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android#g'
-        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g' -e 's/org\.krita\.R/org\.nnn1590\.krita\.R/g'
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
@@ -520,7 +520,7 @@ jobs:
         . envsetup.sh
         find krita -type f -print0 | xargs -0 sed -i -e 's/org_krita_android/org_nnn1590_krita_android/g'
         find libs/ui -iname '*android*' -type f -print0 | xargs -0 sed -i -e 's#org/krita/android#org/nnn1590/krita/android#g'
-        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g'
+        find packaging/android -type f -print0 | xargs -0 sed -i -e 's/org\.krita\.android/org\.nnn1590\.krita\.android/g' -e 's/org\.krita\.R/org\.nnn1590\.krita\.R/g'
         sed -i -e 's#package="org\.krita"#package="org\.nnn1590\.krita"#' packaging/android/apk/AndroidManifest.xml
         mkdir packaging/android/apk/src/org/nnn1590
         mv packaging/android/apk/src/org/{krita,nnn1590}
