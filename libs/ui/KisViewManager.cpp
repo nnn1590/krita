@@ -287,8 +287,8 @@ KisViewManager::KisViewManager(QWidget *parent, KActionCollection *_actionCollec
     connect(KoToolManager::instance(), SIGNAL(inputDeviceChanged(KoInputDevice)),
             d->controlFrame.paintopBox(), SLOT(slotInputDeviceChanged(KoInputDevice)));
 
-    connect(KoToolManager::instance(), SIGNAL(changedTool(KoCanvasController*,int)),
-            d->controlFrame.paintopBox(), SLOT(slotToolChanged(KoCanvasController*,int)));
+    connect(KoToolManager::instance(), SIGNAL(changedTool(KoCanvasController*)),
+            d->controlFrame.paintopBox(), SLOT(slotToolChanged(KoCanvasController*)));
 
     connect(&d->nodeManager, SIGNAL(sigNodeActivated(KisNodeSP)),
             canvasResourceProvider(), SLOT(slotNodeActivated(KisNodeSP)));
@@ -858,7 +858,7 @@ void KisViewManager::slotCreateCopy()
 
     QString name = srcDoc->documentInfo()->aboutInfo("name");
     if (name.isEmpty()) {
-        name = document()->url().toLocalFile();
+        name = document()->path();
     }
     name = i18n("%1 (Copy)", name);
     doc->documentInfo()->setAboutInfo("title", name);
@@ -897,7 +897,7 @@ void KisViewManager::slotSaveIncremental()
 {
     if (!document()) return;
 
-    if (document()->url().isEmpty()) {
+    if (document()->path().isEmpty()) {
         KisMainWindow *mw = qobject_cast<KisMainWindow*>(d->mainWindow);
         mw->saveDocument(document(), true, false);
         return;
@@ -986,11 +986,12 @@ void KisViewManager::slotSaveIncremental()
         QMessageBox::critical(mainWindow(), i18nc("@title:window", "Couldn't save incremental version"), i18n("Alternative names exhausted, try manually saving with a higher number"));
         return;
     }
-    QUrl newUrl = QUrl::fromUserInput(path + '/' + fileName);
+    QString newFilePath = path + '/' + fileName;
     document()->setFileBatchMode(true);
-    document()->saveAs(newUrl, document()->mimeType(), true);
+    document()->saveAs(newFilePath, document()->mimeType(), true);
     document()->setFileBatchMode(false);
-    KisPart::instance()->addRecentURLToAllMainWindows(newUrl, document()->url());
+    KisPart::instance()->addRecentURLToAllMainWindows(QUrl::fromLocalFile(newFilePath),
+                                                      QUrl::fromLocalFile(document()->path()));
 
     if (mainWindow()) {
         mainWindow()->updateCaption();
@@ -1002,7 +1003,7 @@ void KisViewManager::slotSaveIncrementalBackup()
 {
     if (!document()) return;
 
-    if (document()->url().isEmpty()) {
+    if (document()->path().isEmpty()) {
         KisMainWindow *mw = qobject_cast<KisMainWindow*>(d->mainWindow);
         mw->saveDocument(document(), true, false);
         return;
@@ -1050,7 +1051,7 @@ void KisViewManager::slotSaveIncrementalBackup()
             if (!letter.isNull()) newVersion.append(letter);
             newVersion.append(".");
             backupFileName.replace(regex, newVersion);
-            fileAlreadyExists = QFile(backupFileName).exists();
+            fileAlreadyExists = QFile(path + '/' + backupFileName).exists();
             if (fileAlreadyExists) {
                 if (!letter.isNull()) {
                     char letterCh = letter.at(0).toLatin1();
@@ -1067,7 +1068,7 @@ void KisViewManager::slotSaveIncrementalBackup()
             return;
         }
         QFile::copy(path + '/' + fileName, path + '/' + backupFileName);
-        document()->saveAs(QUrl::fromUserInput(path + '/' + fileName), document()->mimeType(), true);
+        document()->saveAs(path + '/' + fileName, document()->mimeType(), true);
 
         if (mainWindow()) mainWindow()->updateCaption();
     }
@@ -1090,7 +1091,7 @@ void KisViewManager::slotSaveIncrementalBackup()
             newVersion.prepend("~");
             newVersion.append(".");
             backupFileName.replace(regex, newVersion);
-            fileAlreadyExists = QFile(backupFileName).exists();
+            fileAlreadyExists = QFile(path + '/' + backupFileName).exists();
             if (fileAlreadyExists) {
                 // Prepare the base for new version filename, increment by 1
                 int intVersion = baseNewVersion.toInt(0);
@@ -1105,7 +1106,7 @@ void KisViewManager::slotSaveIncrementalBackup()
         // Save both as backup and on current file for interapplication workflow
         document()->setFileBatchMode(true);
         QFile::copy(path + '/' + fileName, path + '/' + backupFileName);
-        document()->saveAs(QUrl::fromUserInput(path + '/' + fileName), document()->mimeType(), true);
+        document()->saveAs(path + '/' + fileName, document()->mimeType(), true);
         document()->setFileBatchMode(false);
 
         if (mainWindow()) mainWindow()->updateCaption();
@@ -1418,7 +1419,7 @@ void KisViewManager::slotActivateTransformTool()
         QSet<KoShape*> dummy;
         // Start a new stroke
         tool->deactivate();
-        tool->activate(KoToolBase::DefaultActivation, dummy);
+        tool->activate(dummy);
     }
 
     KoToolManager::instance()->switchToolRequested("KisToolTransform");

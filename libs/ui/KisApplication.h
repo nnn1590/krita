@@ -62,12 +62,14 @@ public:
      */
     virtual bool start(const KisApplicationArguments &args);
 
+    bool event(QEvent *event) override;
+
     /**
      * Checks if user is holding ctrl+alt+shift keys and asks if the settings file should be cleared.
      *
      * Typically called during startup before reading the config.
      */
-    void askresetConfig();
+    void askResetConfig();
 
     /**
      * Tell KisApplication to show this splashscreen when you call start();

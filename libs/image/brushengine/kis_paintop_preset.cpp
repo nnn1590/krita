@@ -1,6 +1,6 @@
 /* This file is part of the KDE project
- * Copyright (C) Boudewijn Rempt <boud@valdyas.org>, (C) 2008
- * Copyright (C) Sven Langkamp <sven.langkamp@gmail.com>, (C) 2009
+ * SPDX-FileCopyrightText: 2008 Boudewijn Rempt <boud@valdyas.org>
+ * SPDX-FileCopyrightText: 2009 Sven Langkamp <sven.langkamp@gmail.com>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -65,14 +65,13 @@ KisPaintOpPreset::KisPaintOpPreset(const KisPaintOpPreset &rhs)
     if (rhs.settings()) {
         setSettings(rhs.settings()); // the settings are cloned inside!
     }
-    setDirty(isDirty());
+    KIS_SAFE_ASSERT_RECOVER_NOOP(isDirty() == rhs.isDirty());
     // only valid if we could clone the settings
     setValid(rhs.settings());
 
     setPaintOp(rhs.paintOp());
     setName(rhs.name());
     setImage(rhs.image());
-    settings()->setUpdateProxy(rhs.updateProxy());
 }
 
 KoResourceSP KisPaintOpPreset::clone() const
@@ -116,7 +115,7 @@ void KisPaintOpPreset::setSettings(KisPaintOpSettingsSP settings)
     if (d->settings) {
         oldOptionsWidget = d->settings->optionsWidget();
         d->settings->setOptionsWidget(0);
-        d->settings->setUpdateProxy(updateProxy());
+        d->settings->setUpdateProxy(0);
         d->settings = 0;
     }
 
@@ -144,66 +143,6 @@ KisPaintOpSettingsSP KisPaintOpPreset::settings() const
     Q_ASSERT(!d->settings->getString("paintop", QString()).isEmpty());
 
     return d->settings;
-}
-
-bool KisPaintOpPreset::load(KisResourcesInterfaceSP resourcesInterface)
-{
-    setValid(false);
-
-    if (filename().isEmpty()) {
-        return false;
-    }
-
-    QIODevice *dev = 0;
-    QByteArray ba;
-
-    if (filename().startsWith("bundle://")) {
-        QString bn = filename().mid(9);
-        int pos = bn.lastIndexOf(":");
-        QString fn = bn.right(bn.size() - pos - 1);
-        bn = bn.left(pos);
-
-        QScopedPointer<KoStore> resourceStore(KoStore::createStore(bn, KoStore::Read, "application/x-krita-resourcebundle", KoStore::Zip));
-        if (!resourceStore || resourceStore->bad()) {
-            warnKrita << "Could not open store on bundle" << bn;
-            return false;
-        }
-
-        if (resourceStore->isOpen()) resourceStore->close();
-
-        if (!resourceStore->open(fn)) {
-            warnKrita << "Could not open preset" << fn << "in bundle" << bn;
-            return false;
-        }
-
-        ba = resourceStore->device()->readAll();
-        dev = new QBuffer(&ba);
-
-        resourceStore->close();
-    }
-    else {
-
-        dev = new QFile(filename());
-        if (dev->size() == 0)
-        {
-            delete dev;
-            return false;
-        }
-
-        if (!dev->open(QIODevice::ReadOnly)) {
-            warnKrita << "Can't open file " << filename();
-            delete dev;
-            return false;
-        }
-    }
-
-    bool res = loadFromDevice(dev, resourcesInterface);
-    delete dev;
-
-    setValid(res);
-    setDirty(false);
-    return res;
-
 }
 
 bool KisPaintOpPreset::loadFromDevice(QIODevice *dev, KisResourcesInterfaceSP resourcesInterface)
@@ -246,15 +185,6 @@ bool KisPaintOpPreset::loadFromDevice(QIODevice *dev, KisResourcesInterfaceSP re
     return true;
 }
 
-bool KisPaintOpPreset::save()
-{
-    const QString paintopid = d->settings->getString("paintop", QString());
-    if (paintopid.isEmpty())
-        return false;
-
-    return KoResource::save();
-}
-
 void KisPaintOpPreset::toXML(QDomDocument& doc, QDomElement& elt) const
 {
     QString paintopid = d->settings->getString("paintop", QString());
@@ -279,6 +209,10 @@ void KisPaintOpPreset::fromXML(const QDomElement& presetElt, KisResourcesInterfa
 {
     setName(presetElt.attribute("name"));
     QString paintopid = presetElt.attribute("paintopid");
+
+    if (!metadata().contains("paintopid")) {
+        addMetaData("paintopid", paintopid);
+    }
 
     if (paintopid.isEmpty()) {
         dbgImage << "No paintopid attribute";
@@ -334,8 +268,6 @@ bool KisPaintOpPreset::saveToDevice(QIODevice *dev) const
     } else {
         img = image();
     }
-
-    const_cast<KisPaintOpPreset*>(this)->setDirty(false);
 
     KoResource::saveToDevice(dev);
 
@@ -403,21 +335,6 @@ void KisPaintOpPreset::setCanvasResourcesInterface(KoCanvasResourcesInterfaceSP 
     d->settings->setCanvasResourcesInterface(canvasResourcesInterface);
 }
 
-namespace KisRequiredResourcesOperators
-{
-template <>
-struct ResourceTraits<KisPaintOpPreset>
-{
-    template <typename T>
-    using SharedPointerType = QSharedPointer<T>;
-
-    template <typename D, typename S>
-    static inline SharedPointerType<D> dynamicCastSP(SharedPointerType<S> src) {
-        return src.template dynamicCast<D>();
-    }
-};
-}
-
 void KisPaintOpPreset::createLocalResourcesSnapshot(KisResourcesInterfaceSP globalResourcesInterface, KoCanvasResourcesInterfaceSP canvasResourcesInterface)
 {
     KisRequiredResourcesOperators::createLocalResourcesSnapshot(this, globalResourcesInterface);
@@ -440,7 +357,7 @@ bool KisPaintOpPreset::hasLocalResourcesSnapshot() const
 KisPaintOpPresetSP KisPaintOpPreset::cloneWithResourcesSnapshot(KisResourcesInterfaceSP globalResourcesInterface, KoCanvasResourcesInterfaceSP canvasResourcesInterface) const
 {
     KisPaintOpPresetSP result =
-        KisRequiredResourcesOperators::cloneWithResourcesSnapshot(this, globalResourcesInterface);
+        KisRequiredResourcesOperators::cloneWithResourcesSnapshot<KisPaintOpPresetSP>(this, globalResourcesInterface);
 
     const QList<int> canvasResources = result->requiredCanvasResources();
     if (!canvasResources.isEmpty()) {

@@ -147,6 +147,28 @@ namespace KisAnimUtils {
         removeKeyframes(image, frames);
     }
 
+    void resetChannels(KisImageSP image, KisNodeSP node, const QList<QString> &channelIDs) {
+        QVector<FrameItem> frames;
+
+        Q_FOREACH( const QString& channelID, channelIDs) {
+            KisKeyframeChannel* channel = node->getKeyframeChannel(channelID, false);
+            if (!channel)
+                continue;
+
+            Q_FOREACH( const int& time, channel->allKeyframeTimes()) {
+                frames << FrameItem(node, channelID, time);
+            }
+        }
+
+        removeKeyframes(image, frames);
+    }
+
+    void resetChannel(KisImageSP image, KisNodeSP node, const QString &channelID) {
+        QList<QString> channels;
+        channels << channelID;
+        resetChannels(image, node, channels);
+
+    }
 
     struct LessOperator {
         LessOperator(const QPoint &offset)
@@ -261,7 +283,8 @@ namespace KisAnimUtils {
                 kundo2_i18np("Move Keyframe",
                              "Move %1 Keyframes",
                              srcDstPairs.size()) :
-                kundo2_i18np("Copy Keyframe",
+                kundo2_i18ncp("Copy one or several keyframes",
+                             "Copy Keyframe",
                              "Copy %1 Keyframes",
                              srcDstPairs.size()),
 
@@ -390,5 +413,6 @@ namespace KisAnimUtils {
         dbg.nospace() << "FrameItem(" << item.node->name() << ", " << item.channel << ", " << item.time << ")";
         return dbg.space();
     }
+
 }
 

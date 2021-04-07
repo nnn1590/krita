@@ -28,6 +28,13 @@
 #include "kundo2magicstring.h"
 
 #include <KisUsageLogger.h>
+#include "kis_types.h"
+#include "kis_tool.h"
+#include "kis_paintop_preset.h"
+#include "kis_paintop_settings.h"
+#include "kis_floating_message.h"
+#include "canvas/kis_canvas2.h"
+#include "KisViewManager.h"
 
 #define MAXIMUM_SMOOTHNESS_DISTANCE 1000.0 // 0..1000.0 == weight in gui
 #define MAXIMUM_MAGNETISM 1000
@@ -66,9 +73,9 @@ KisToolBrush::~KisToolBrush()
 {
 }
 
-void KisToolBrush::activate(ToolActivation activation, const QSet<KoShape*> &shapes)
+void KisToolBrush::activate(const QSet<KoShape*> &shapes)
 {
-    KisToolFreehand::activate(activation, shapes);
+    KisToolFreehand::activate(shapes);
     connect(&m_signalMapper, SIGNAL(mapped(int)), SLOT(slotSetSmoothingType(int)), Qt::UniqueConnection);
 
     QAction *toggleaction = action("toggle_assistant");
@@ -426,7 +433,7 @@ QWidget * KisToolBrush::createOptionWidget()
     // add a line spacer so we know that the next set of options are for different settings
     QFrame* line = new QFrame(optionsWidget);
     line->setObjectName(QString::fromUtf8("line"));
-    line->setFrameShape(QFrame::HLine);
+    line->setFrameStyle(QFrame::HLine | QFrame::Sunken);
     addOptionWidgetOption(line);
 
     // Drawing assistant configuration

@@ -62,9 +62,9 @@ KisToolSelectContiguous::~KisToolSelectContiguous()
 {
 }
 
-void KisToolSelectContiguous::activate(ToolActivation toolActivation, const QSet<KoShape*> &shapes)
+void KisToolSelectContiguous::activate(const QSet<KoShape*> &shapes)
 {
-    KisToolSelect::activate(toolActivation, shapes);
+    KisToolSelect::activate(shapes);
     m_configGroup =  KSharedConfig::openConfig()->group(toolId());
 }
 
@@ -91,7 +91,7 @@ void KisToolSelectContiguous::beginPrimaryAction(KoPointerEvent *event)
 
     KisProcessingApplicator applicator(currentImage(), currentNode(),
                                        KisProcessingApplicator::NONE,
-                                       KisImageSignalVector() << ModifiedSignal,
+                                       KisImageSignalVector(),
                                        kundo2_i18n("Select Contiguous Area"));
 
     QPoint pos = convertToImagePixelCoordFloored(event);

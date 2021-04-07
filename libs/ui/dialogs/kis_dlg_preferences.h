@@ -83,6 +83,7 @@ public:
     bool switchSelectionCtrlAlt();
     bool convertToImageColorspaceOnImport();
     bool autopinLayersToTimeline();
+    bool adaptivePlaybackRange();
 
 private Q_SLOTS:
     void getBackgroundImage();
@@ -157,6 +158,7 @@ private Q_SLOTS:
     void refillMonitorProfiles(const KoID & s);
     void installProfile();
     void toggleAllowMonitorProfileSelection(bool useSystemProfile);
+    void toggleUseDefaultColorSpace(bool useDefColorSpace);
 
 public:
     void setDefault();

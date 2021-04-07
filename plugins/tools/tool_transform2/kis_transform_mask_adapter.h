@@ -17,6 +17,7 @@ class ToolTransformArgs;
 class KRITATOOLTRANSFORM_EXPORT KisTransformMaskAdapter : public KisTransformMaskParamsInterface
 {
 public:
+    KisTransformMaskAdapter();
     KisTransformMaskAdapter(const ToolTransformArgs &args);
     ~KisTransformMaskAdapter() override;
 
@@ -26,7 +27,8 @@ public:
 
     void transformDevice(KisNodeSP node, KisPaintDeviceSP src, KisPaintDeviceSP dst) const override;
 
-    virtual const ToolTransformArgs& transformArgs() const;
+    virtual const QSharedPointer<ToolTransformArgs> transformArgs() const;
+    void setBaseArgs(const ToolTransformArgs& args);
 
     QString id() const override;
     void toXML(QDomElement *e) const override;
@@ -41,6 +43,8 @@ public:
     KisKeyframeChannel *getKeyframeChannel(const QString &id, KisDefaultBoundsBaseSP defaultBounds);
     void clearChangedFlag() override;
     bool hasChanged() const override;
+
+    KisTransformMaskParamsInterfaceSP clone() const override;
 
 private:
     struct Private;

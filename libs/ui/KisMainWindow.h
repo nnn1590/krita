@@ -112,7 +112,7 @@ public:
      *
      * @return TRUE on success.
      */
-    bool openDocument(const QUrl &url, OpenFlags flags);
+    bool openDocument(const QString &path, OpenFlags flags);
 
     /**
      * Activate a view containing the document in this window, creating one if needed.
@@ -140,7 +140,7 @@ public:
      *         (don't display anything in this case, the error dialog box is also implemented here
      *         but restore the original URL in slotFileSaveAs)
      */
-    bool saveDocument(KisDocument *document, bool saveas, bool isExporting);
+    bool saveDocument(KisDocument *document, bool saveas, bool isExporting, bool isAdvancedExporting = false);
 
     void setReadWrite(bool readwrite);
 
@@ -312,17 +312,16 @@ public Q_SLOTS:
     void setCanvasDetached(bool detached);
 
     /**
-     * @brief Called when a file is picked using Android's Storage Access Framework
-     * @param url
-     */
-    void slotFileSelected(QUrl url);
-
-    void slotEmptyFilePath();
-
-    /**
      * Toggle full screen on/off.
      */
     void viewFullscreen(bool fullScreen);
+
+    /**
+     * @brief checkActiveStorages checks whether there is at least one bundle available and
+     * at least one paintop preset.
+     */
+    bool checkActiveBundlesAvailable();
+    bool checkPaintOpAvailable();
 
 
 private Q_SLOTS:
@@ -350,6 +349,8 @@ private Q_SLOTS:
     void slotFileSaveAs();
 
     void importAnimation();
+    
+    void importVideoAnimation();
 
     void renderAnimation();
 
@@ -415,6 +416,8 @@ private Q_SLOTS:
      */
     void slotExportFile();
 
+    void slotExportAdvance();
+
     /**
      * Hide the dockers
      */
@@ -450,6 +453,11 @@ private Q_SLOTS:
     void orientationChanged();
 
     void restoreWorkspace();
+
+    void openCommandBar();
+
+    void slotStoragesWarning(const QString &location = QString());
+
 protected:
 
     void closeEvent(QCloseEvent * e) override;
@@ -483,7 +491,7 @@ private:
      */
     QDockWidget* createDockWidget(KoDockFactoryBase* factory);
 
-    bool openDocumentInternal(const QUrl &url, KisMainWindow::OpenFlags f = KisMainWindow::OpenFlags());
+    bool openDocumentInternal(const QString &path, KisMainWindow::OpenFlags f = KisMainWindow::OpenFlags());
 
     void saveWindowSettings();
 

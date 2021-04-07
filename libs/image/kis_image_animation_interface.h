@@ -86,6 +86,7 @@ public:
     void notifyNodeChanged(const KisNode *node, const QRect &rect, bool recursive);
     void notifyNodeChanged(const KisNode *node, const QVector<QRect> &rects, bool recursive);
     void invalidateFrames(const KisTimeSpan &range, const QRect &rect);
+    void invalidateFrame(const int time, KisNodeSP target);
 
     /**
      * Changes the default color of the "external frame" projection of
@@ -117,6 +118,15 @@ public:
      */
     void setAudioChannelFileName(const QString &fileName);
 
+    QString exportSequenceFilePath();
+    void setExportSequenceFilePath(const QString &filePath);
+
+    QString exportSequenceBaseName();
+    void setExportSequenceBaseName(const QString &baseName);
+
+    int exportInitialFrameNumber();
+    void setExportInitialFrameNumber(const int frameNum);
+
     /**
      * @return is the audio channel is currently muted
      */
@@ -136,6 +146,9 @@ public:
      * Set the preferred volume for the audio channel in range [0, 1]
      */
     void setAudioVolume(qreal value);
+
+    QSet<int> activeLayerSelectedTimes();
+    void setActiveLayerSelectedTimes(const QSet<int> &times);
 
     KisImageWSP image() const;
 

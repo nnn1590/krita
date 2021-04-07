@@ -21,7 +21,7 @@
 class KisDoubleSliderSpinBox;
 class QCheckBox;
 class QGridLayout;
-
+class KisAngleSelector;
 
 class KoCanvasBase;
 
@@ -63,7 +63,7 @@ public:
     ~KisToolDyna() override;
 
     QWidget * createOptionWidget() override;
-    void activate(ToolActivation toolActivation, const QSet<KoShape*> &shapes) override;
+    void activate(const QSet<KoShape*> &shapes) override;
     void beginPrimaryAction(KoPointerEvent *event) override;
     void continuePrimaryAction(KoPointerEvent *event) override;
 
@@ -89,7 +89,7 @@ private:
     QCheckBox * m_chkFixedAngle;
     KisDoubleSliderSpinBox * m_massSPBox;
     KisDoubleSliderSpinBox * m_dragSPBox;
-    KisDoubleSliderSpinBox * m_angleDSSBox;
+    KisAngleSelector * m_angleSelector;
 
     // dyna algorithm
     QVector<QPointF> m_prevPosition;
@@ -136,7 +136,7 @@ public:
             : KisToolPaintFactoryBase("KritaShape/KisToolDyna") {
 
         setToolTip(i18n("Dynamic Brush Tool"));
-        setSection(TOOL_TYPE_SHAPE);
+        setSection(ToolBoxSection::Shape);
         setIconName(koIconNameCStr("krita_tool_dyna"));
         //setShortcut(QKeySequence(Qt::Key_F));
         setPriority(10);

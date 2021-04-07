@@ -20,8 +20,12 @@ public:
 
     KisResourceStorage::ResourceItem resourceItem(const QString &url) override;
     KoResourceSP resource(const QString &url) override;
+    bool loadVersionedResource(KoResourceSP resource) override;
+    bool supportsVersioning() const override;
     QSharedPointer<KisResourceStorage::ResourceIterator> resources(const QString &resourceType) override;
     QSharedPointer<KisResourceStorage::TagIterator> tags(const QString &resourceType) override;
+
+    bool addResource(const QString &resourceType, KoResourceSP resource) override;
 
     QSharedPointer<KisAslLayerStyleSerializer> m_aslSerializer;
 };

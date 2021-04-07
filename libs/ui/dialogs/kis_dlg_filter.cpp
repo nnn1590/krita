@@ -25,7 +25,8 @@
 #include "kis_filter_manager.h"
 #include "ui_wdgfilterdialog.h"
 #include "kis_canvas2.h"
-
+#include "kis_signal_compressor.h"
+#include <kis_icon_utils.h>
 
 struct KisDlgFilter::Private {
     Private(KisFilterManager *_filterManager, KisViewManager *_view)
@@ -34,7 +35,13 @@ struct KisDlgFilter::Private {
             , view(_view)
             , filterManager(_filterManager)
             , blockModifyingActionsGuard(new KisInputActionGroupsMaskGuard(view->canvasBase(), ViewTransformActionGroup))
+            , updateCompressor(200, KisSignalCompressor::FIRST_ACTIVE)
     {
+        updateCompressor.setDelay(
+            [this] () {
+                return filterManager->isIdle();
+            },
+            20, 200);
     }
 
     KisFilterSP currentFilter;
@@ -47,6 +54,7 @@ struct KisDlgFilter::Private {
     // a special guard object that blocks all the painting input actions while the
     // dialog is open
     QScopedPointer<KisInputActionGroupsMaskGuard> blockModifyingActionsGuard;
+    KisSignalCompressor updateCompressor;
 };
 
 KisDlgFilter::KisDlgFilter(KisViewManager *view, KisNodeSP node, KisFilterManager *filterManager, QWidget *parent) :
@@ -66,7 +74,7 @@ KisDlgFilter::KisDlgFilter(KisViewManager *view, KisNodeSP node, KisFilterManage
     connect(d->uiFilterDialog.pushButtonCreateMaskEffect,SIGNAL(pressed()),SLOT(close()));
 
     d->uiFilterDialog.filterGalleryToggle->setChecked(d->uiFilterDialog.filterSelection->isFilterGalleryVisible());
-    d->uiFilterDialog.filterGalleryToggle->setIcon(QPixmap(":/pics/sidebaricon.png"));
+    d->uiFilterDialog.filterGalleryToggle->setIcon(KisIconUtils::loadIcon("sidebaricon"));
     d->uiFilterDialog.filterGalleryToggle->setMaximumWidth(d->uiFilterDialog.filterGalleryToggle->height());
     connect(d->uiFilterDialog.filterSelection, SIGNAL(sigFilterGalleryToggled(bool)), d->uiFilterDialog.filterGalleryToggle, SLOT(setChecked(bool)));
     connect(d->uiFilterDialog.filterGalleryToggle, SIGNAL(toggled(bool)), d->uiFilterDialog.filterSelection, SLOT(showFilterGallery(bool)));
@@ -81,7 +89,6 @@ KisDlgFilter::KisDlgFilter(KisViewManager *view, KisNodeSP node, KisFilterManage
     connect(d->uiFilterDialog.buttonBox, SIGNAL(accepted()), SLOT(accept()));
     connect(d->uiFilterDialog.buttonBox, SIGNAL(rejected()), SLOT(reject()));
     connect(d->uiFilterDialog.checkBoxPreview, SIGNAL(toggled(bool)), SLOT(enablePreviewToggled(bool)));
-
     connect(d->uiFilterDialog.filterSelection, SIGNAL(configurationChanged()), SLOT(filterSelectionChanged()));
 
     connect(this, SIGNAL(accepted()), SLOT(slotOnAccept()));
@@ -91,7 +98,19 @@ KisDlgFilter::KisDlgFilter(KisViewManager *view, KisNodeSP node, KisFilterManage
     KConfigGroup group( KSharedConfig::openConfig(), "filterdialog");
     d->uiFilterDialog.checkBoxPreview->setChecked(group.readEntry("showPreview", true));
 
+    d->uiFilterDialog.chkFilterSelectedFrames->setChecked(d->filterManager->filterAllSelectedFrames());
+
+    //Handle create mask toggle based on state of chkFilterSelectedFrames
+    connect(d->uiFilterDialog.chkFilterSelectedFrames, &QCheckBox::toggled, [this](const bool state){
+        if (d->currentFilter) {
+            d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(!state && d->currentFilter->supportsAdjustmentLayers());
+        }
+    });
+
+    d->uiFilterDialog.chkFilterSelectedFrames->setToolTip(i18n("In addition to filtering the currently visible frame, \nfilter all other keyframe selected in the Animation Timeline docker."));
+
     restoreGeometry(KisConfig(true).readEntry("filterdialog/geometry", QByteArray()));
+    connect(&d->updateCompressor, SIGNAL(timeout()), this, SLOT(updatePreview()));
 
 }
 
@@ -106,9 +125,10 @@ void KisDlgFilter::setFilter(KisFilterSP f, KisFilterConfigurationSP overrideDef
     Q_ASSERT(f);
     setDialogTitle(f);
     d->uiFilterDialog.filterSelection->setFilter(f, overrideDefaultConfig);
-    d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(f->supportsAdjustmentLayers());
+    const bool multiframeEnabled = d->uiFilterDialog.chkFilterSelectedFrames->isChecked();
+    d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(f->supportsAdjustmentLayers() && !multiframeEnabled);
     d->currentFilter = f;
-    updatePreview();
+    d->updateCompressor.start();
 }
 
 void KisDlgFilter::setDialogTitle(KisFilterSP filter)
@@ -133,7 +153,8 @@ void KisDlgFilter::updatePreview()
     if (!config) return;
 
     bool maskCreationAllowed = !d->currentFilter || d->currentFilter->configurationAllowedForMask(config);
-    d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(maskCreationAllowed);
+    const bool multiframeEnabled = d->uiFilterDialog.chkFilterSelectedFrames->isChecked();
+    d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(maskCreationAllowed && !multiframeEnabled);
 
     if (d->uiFilterDialog.checkBoxPreview->isChecked()) {
         KisFilterConfigurationSP config(d->uiFilterDialog.filterSelection->configuration());
@@ -160,6 +181,7 @@ void KisDlgFilter::slotOnAccept()
         startApplyingFilter(config);
     }
 
+    d->filterManager->setFilterAllSelectedFrames(d->uiFilterDialog.chkFilterSelectedFrames->isChecked());
     d->filterManager->finish();
 
     d->uiFilterDialog.buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
@@ -199,7 +221,7 @@ void KisDlgFilter::createMask()
 void KisDlgFilter::enablePreviewToggled(bool state)
 {
     if (state) {
-        updatePreview();
+        d->updateCompressor.start();
     } else if (d->filterManager->isStrokeRunning()) {
         d->filterManager->cancel();
     }
@@ -215,8 +237,9 @@ void KisDlgFilter::filterSelectionChanged()
     KisFilterSP filter = d->uiFilterDialog.filterSelection->currentFilter();
     setDialogTitle(filter);
     d->currentFilter = filter;
-    d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(filter.isNull() ? false : filter->supportsAdjustmentLayers());
-    updatePreview();
+    const bool multiframeEnabled = d->uiFilterDialog.chkFilterSelectedFrames->isChecked();
+    d->uiFilterDialog.pushButtonCreateMaskEffect->setEnabled(filter.isNull() ? false : (filter->supportsAdjustmentLayers() && !multiframeEnabled));
+    d->updateCompressor.start();
 }
 
 

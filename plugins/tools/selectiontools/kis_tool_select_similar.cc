@@ -83,9 +83,9 @@ KisToolSelectSimilar::KisToolSelectSimilar(KoCanvasBase * canvas)
 {
 }
 
-void KisToolSelectSimilar::activate(ToolActivation toolActivation, const QSet<KoShape*> &shapes)
+void KisToolSelectSimilar::activate(const QSet<KoShape*> &shapes)
 {
-    KisToolSelect::activate(toolActivation, shapes);
+    KisToolSelect::activate(shapes);
     if (selectionOptionWidget()) {
         // similar color selection tool doesn't use antialiasing option for now
         // hence explicit disabling it
@@ -124,7 +124,7 @@ void KisToolSelectSimilar::beginPrimaryAction(KoPointerEvent *event)
 
     KisProcessingApplicator applicator(currentImage(), currentNode(),
                                        KisProcessingApplicator::NONE,
-                                       KisImageSignalVector() << ModifiedSignal,
+                                       KisImageSignalVector(),
                                        kundo2_i18n("Select Contiguous Area"));
 
 

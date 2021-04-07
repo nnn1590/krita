@@ -16,6 +16,7 @@
 #include <QLabel>
 #include "kis_canvas2.h"
 #include "kis_cursor.h"
+#include "KisViewManager.h"
 
 #include "kis_tool_multihand_helper.h"
 
@@ -425,11 +426,12 @@ QWidget* KisToolMultihand::createOptionWidget()
     slotSetTransformMode(customUI->multihandTypeCombobox->currentIndex());
 
 
-    customUI->axisRotationSpinbox->setSuffix(QChar(Qt::Key_degree));   // origin rotation
-    customUI->axisRotationSpinbox->setSingleStep(1.0);
-    customUI->axisRotationSpinbox->setRange(0.0, 90.0, 1);
-    customUI->axisRotationSpinbox->setValue(m_configGroup.readEntry("axesAngle", 0.0));
-    connect( customUI->axisRotationSpinbox, SIGNAL(valueChanged(qreal)),this, SLOT(slotSetAxesAngle(qreal)));
+    customUI->axisRotationAngleSelector->setRange(0.0, 90.0);
+    customUI->axisRotationAngleSelector->setDecimals(1);
+    customUI->axisRotationAngleSelector->setWrapping(false);
+    customUI->axisRotationAngleSelector->setFlipOptionsMode(KisAngleSelector::FlipOptionsMode_NoFlipOptions);
+    customUI->axisRotationAngleSelector->setAngle(m_configGroup.readEntry("axesAngle", 0.0));
+    connect( customUI->axisRotationAngleSelector, SIGNAL(angleChanged(qreal)),this, SLOT(slotSetAxesAngle(qreal)));
 
 
     // symmetry mode options
@@ -492,6 +494,12 @@ void KisToolMultihand::updateCanvas()
     KisCanvas2 *kisCanvas = dynamic_cast<KisCanvas2*>(canvas());
     Q_ASSERT(kisCanvas);
     kisCanvas->updateCanvas();
+    if(customUI->moveOriginButton->isChecked())
+    {
+        kisCanvas->viewManager()->showFloatingMessage(i18n("X: %1 px\nY: %2 px"
+                , QString::number(this->m_axesPoint.x(),'f',1),QString::number(this->m_axesPoint.y(),'f',1))
+                , QIcon(), 1000, KisFloatingMessage::High, Qt::AlignLeft | Qt::TextWordWrap | Qt::AlignVCenter);
+    }
 }
 
 void KisToolMultihand::slotSetHandsCount(int count)

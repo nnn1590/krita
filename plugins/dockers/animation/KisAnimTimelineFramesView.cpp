@@ -158,6 +158,7 @@ KisAnimTimelineFramesView::KisAnimTimelineFramesView(QWidget *parent)
     connect(m_d->horizontalRuler, SIGNAL(sigRemoveHoldColumnsCustom()), SLOT(slotRemoveMultipleHoldFrameColumns()));
 
     connect(m_d->horizontalRuler, SIGNAL(sigMirrorColumns()), SLOT(slotMirrorColumns()));
+    connect(m_d->horizontalRuler, SIGNAL(sigClearCache()), SLOT(slotClearCache()));
 
     connect(m_d->horizontalRuler, SIGNAL(sigCopyColumns()), SLOT(slotCopyColumns()));
     connect(m_d->horizontalRuler, SIGNAL(sigCutColumns()), SLOT(slotCutColumns()));
@@ -190,8 +191,8 @@ KisAnimTimelineFramesView::KisAnimTimelineFramesView(QWidget *parent)
 
     m_d->addLayersButton = new QToolButton(this);
     m_d->addLayersButton->setAutoRaise(true);
-    m_d->addLayersButton->setIcon(KisIconUtils::loadIcon("addlayer"));
-    m_d->addLayersButton->setIconSize(QSize(20, 20));
+    m_d->addLayersButton->setIcon(KisIconUtils::loadIcon("list-add-22"));
+    m_d->addLayersButton->setIconSize(QSize(22, 22));
     m_d->addLayersButton->setPopupMode(QToolButton::InstantPopup);
     m_d->addLayersButton->setMenu(m_d->layerEditingMenu);
 
@@ -200,7 +201,7 @@ KisAnimTimelineFramesView::KisAnimTimelineFramesView(QWidget *parent)
     m_d->audioOptionsButton = new QToolButton(this);
     m_d->audioOptionsButton->setAutoRaise(true);
     m_d->audioOptionsButton->setIcon(KisIconUtils::loadIcon("audio-none"));
-    m_d->audioOptionsButton->setIconSize(QSize(20, 20)); // very small on windows if not explicitly set
+    m_d->audioOptionsButton->setIconSize(QSize(22, 22));
     m_d->audioOptionsButton->setPopupMode(QToolButton::InstantPopup);
 
     m_d->audioOptionsMenu = new QMenu(this);
@@ -264,7 +265,7 @@ KisAnimTimelineFramesView::KisAnimTimelineFramesView(QWidget *parent)
     m_d->zoomDragButton = new KisZoomButton(this);
     m_d->zoomDragButton->setAutoRaise(true);
     m_d->zoomDragButton->setIcon(KisIconUtils::loadIcon("zoom-horizontal"));
-    m_d->zoomDragButton->setIconSize(QSize(20, 20)); // this icon is very small on windows if no explicitly set
+    m_d->zoomDragButton->setIconSize(QSize(22, 22));
 
     m_d->zoomDragButton->setToolTip(i18nc("@info:tooltip", "Zoom Timeline. Hold down and drag left or right."));
     m_d->zoomDragButton->setPopupMode(QToolButton::InstantPopup);
@@ -453,7 +454,7 @@ void KisAnimTimelineFramesView::slotCanvasUpdate(KoCanvasBase *canvas)
 
 void KisAnimTimelineFramesView::slotUpdateIcons()
 {
-    m_d->addLayersButton->setIcon(KisIconUtils::loadIcon("addlayer"));
+    m_d->addLayersButton->setIcon(KisIconUtils::loadIcon("list-add-22"));
     m_d->audioOptionsButton->setIcon(KisIconUtils::loadIcon("audio-none"));
     m_d->zoomDragButton->setIcon(KisIconUtils::loadIcon("zoom-horizontal"));
 }
@@ -522,7 +523,9 @@ void KisAnimTimelineFramesView::slotUpdateFrameActions()
 void KisAnimTimelineFramesView::slotSelectionChanged()
 {
     int minColumn = std::numeric_limits<int>::max();
-    int maxColumn = std::numeric_limits<int>::min();
+    int maxColumn = std::numeric_limits<int>::min();    
+
+    calculateActiveLayerSelectedTimes(selectedIndexes());
 
     foreach (const QModelIndex &idx, selectedIndexes()) {
         if (idx.column() > maxColumn) {
@@ -626,6 +629,8 @@ void KisAnimTimelineFramesView::slotHeaderDataChanged(Qt::Orientation orientatio
         if (newFps != m_d->fps) {
             setFramesPerSecond(newFps);
         }
+    } else {
+        calculateActiveLayerSelectedTimes(selectedIndexes());
     }
 }
 
@@ -713,6 +718,10 @@ void KisAnimTimelineFramesView::slotMirrorFrames(bool entireColumn)
     if (!indexes.isEmpty()) {
         m_d->model->mirrorFrames(indexes);
     }
+}
+
+void KisAnimTimelineFramesView::slotClearCache() {
+    m_d->model->clearEntireCache();
 }
 
 void KisAnimTimelineFramesView::slotPasteFrames(bool entireColumn)
@@ -879,6 +888,18 @@ void KisAnimTimelineFramesView::slotEnsureRowVisible(int row)
     scrollTo(index);
 }
 
+void KisAnimTimelineFramesView::calculateActiveLayerSelectedTimes(const QModelIndexList &selection)
+{
+    QSet<int> activeLayerSelectedTimes;
+    Q_FOREACH (const QModelIndex& index, selection) {
+        if (index.data(KisAnimTimelineFramesModel::ActiveLayerRole).toBool()) {
+            activeLayerSelectedTimes.insert(index.column());
+        }
+    }
+
+    m_d->model->setActiveLayerSelectedTimes(activeLayerSelectedTimes);
+}
+
 bool KisAnimTimelineFramesView::viewportEvent(QEvent *event)
 {
     if (event->type() == QEvent::ToolTip && model()) {
@@ -905,7 +926,7 @@ void KisAnimTimelineFramesView::mousePressEvent(QMouseEvent *event)
         if (event->button() == Qt::RightButton) {
             // TODO: try calculate index under mouse cursor even when
             //       it is outside any visible row
-            qreal staticPoint = index.isValid() ? index.column() : currentIndex().column();
+//            qreal staticPoint = index.isValid() ? index.column() : currentIndex().column();
 //            m_d->zoomDragButton->beginZoom(event->pos(), staticPoint);
         } else if (event->button() == Qt::LeftButton) {
             m_d->initialDragPanPos = event->pos();
@@ -1018,17 +1039,33 @@ void KisAnimTimelineFramesView::mousePressEvent(QMouseEvent *event)
                 QPoint(horizontalOffset(), verticalOffset()) + event->pos();
         m_d->lastPressedModifier = event->modifiers();
 
+        m_d->initialDragPanPos = event->pos();
+
         QAbstractItemView::mousePressEvent(event);
     }
 }
 
 void KisAnimTimelineFramesView::mouseMoveEvent(QMouseEvent *e)
 {
+    // Custom keyframe dragging distance based on zoom level.
+    if (state() == DraggingState &&
+        (horizontalHeader()->defaultSectionSize() / 2) < QApplication::startDragDistance() ) {
+
+        const QPoint dragVector = e->pos() - m_d->initialDragPanPos;
+        if (dragVector.manhattanLength() >= (horizontalHeader()->defaultSectionSize() / 2)) {
+            startDrag(model()->supportedDragActions());
+            setState(NoState);
+            stopAutoScroll();
+        }
+    }
+
     if (m_d->modifiersCatcher->modifierPressed("pan-zoom")) {
 
         if (e->buttons() & Qt::RightButton) {
+
 //            m_d->zoomDragButton->continueZoom(e->pos());
         } else if (e->buttons() & Qt::LeftButton) {
+
             QPoint diff = e->pos() - m_d->initialDragPanPos;
             QPoint offset = QPoint(m_d->initialDragPanValue.x() - diff.x(),
                                    m_d->initialDragPanValue.y() - diff.y());
@@ -1199,7 +1236,14 @@ void KisAnimTimelineFramesView::dragMoveEvent(QDragMoveEvent *event)
     m_d->dragInProgress = true;
     m_d->model->setScrubState(true);
 
-    QTableView::dragMoveEvent(event);
+    QAbstractItemView::dragMoveEvent(event);
+
+    // Let's check for moving within a selection --
+    // We want to override the built in qt behavior that
+    // denies drag events when dragging within a selection...
+    if (!event->isAccepted() && selectionModel()->isSelected(indexAt(event->pos()))) {
+        event->setAccepted(true);
+    }
 
     if (event->isAccepted()) {
         QModelIndex index = indexAt(event->pos());
@@ -1232,6 +1276,19 @@ void KisAnimTimelineFramesView::dropEvent(QDropEvent *event)
     }
 
     QAbstractItemView::dropEvent(event);
+
+    // Override drop event to accept drops within selected range.0
+    QModelIndex index = indexAt(event->pos());
+    if (!event->isAccepted() &&  selectionModel()->isSelected(index)) {
+        event->setAccepted(true);
+        const Qt::DropAction action = event->dropAction();
+        const int row = event->pos().y();
+        const int column = event->pos().x();
+        if (m_d->model->dropMimeData(event->mimeData(), action, row, column, index)) {
+            event->acceptProposedAction();
+        }
+    }
+
     m_d->dragWasSuccessful = event->isAccepted();
 }
 

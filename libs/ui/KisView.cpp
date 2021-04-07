@@ -74,6 +74,12 @@
 #include "input/kis_input_manager.h"
 #include "KisRemoteFileFetcher.h"
 #include "kis_selection_manager.h"
+#include "kis_fill_painter.h"
+#include "KisImageSignals.h"
+#include "kis_resources_snapshot.h"
+#include "kis_processing_applicator.h"
+#include "processing/fill_processing_visitor.h"
+#include "utils/KisClipboardUtil.h"
 
 //static
 QString KisView::newObjectName()
@@ -440,7 +446,9 @@ void KisView::dragEnterEvent(QDragEnterEvent *event)
     //qDebug() << "KisView::dragEnterEvent formats" << event->mimeData()->formats() << "urls" << event->mimeData()->urls() << "has images" << event->mimeData()->hasImage();
     if (event->mimeData()->hasImage()
             || event->mimeData()->hasUrls()
-            || event->mimeData()->hasFormat("application/x-krita-node")) {
+            || event->mimeData()->hasFormat("application/x-krita-node")
+            || event->mimeData()->hasFormat("krita/x-colorsetentry")
+            || event->mimeData()->hasColor()) {
         event->accept();
 
         // activate view if it should accept the drop
@@ -498,98 +506,48 @@ void KisView::dropEvent(QDropEvent *event)
     }
     else if (event->mimeData()->hasUrls()) {
 
-        QList<QUrl> urls = event->mimeData()->urls();
-        if (urls.length() > 0) {
+        KisClipboardUtil::clipboardHasUrlsAction(this, event->mimeData());
 
-            QMenu popup;
-            popup.setObjectName("drop_popup");
+    }
+    else if (event->mimeData()->hasColor() || event->mimeData()->hasFormat("krita/x-colorsetentry")) {
+        if (image() && d->viewManager->activeDevice()) {
+            KisProcessingApplicator applicator(image(), d->viewManager->activeNode(),
+                                               KisProcessingApplicator::NONE,
+                                               KisImageSignalVector(),
+                                               kundo2_i18n("Flood Fill Layer"));
 
-            QAction *insertAsNewLayer = new QAction(i18n("Insert as New Layer"), &popup);
-            QAction *insertManyLayers = new QAction(i18n("Insert Many Layers"), &popup);
+            KisResourcesSnapshotSP resources =
+                new KisResourcesSnapshot(image(), d->viewManager->activeNode(), d->viewManager->canvasResourceProvider()->resourceManager());
 
-            QAction *insertAsNewFileLayer = new QAction(i18n("Insert as New File Layer"), &popup);
-            QAction *insertManyFileLayers = new QAction(i18n("Insert Many File Layers"), &popup);
-
-            QAction *openInNewDocument = new QAction(i18n("Open in New Document"), &popup);
-            QAction *openManyDocuments = new QAction(i18n("Open Many Documents"), &popup);
-
-            QAction *insertAsReferenceImage = new QAction(i18n("Insert as Reference Image"), &popup);
-            QAction *insertAsReferenceImages = new QAction(i18n("Insert as Reference Images"), &popup);
-
-            QAction *cancel = new QAction(i18n("Cancel"), &popup);
-
-            popup.addAction(insertAsNewLayer);
-            popup.addAction(insertAsNewFileLayer);
-            popup.addAction(openInNewDocument);
-            popup.addAction(insertAsReferenceImage);
-
-            popup.addAction(insertManyLayers);
-            popup.addAction(insertManyFileLayers);
-            popup.addAction(openManyDocuments);
-            popup.addAction(insertAsReferenceImages);
-
-            insertAsNewLayer->setEnabled(image() && urls.count() == 1);
-            insertAsNewFileLayer->setEnabled(image() && urls.count() == 1);
-            openInNewDocument->setEnabled(urls.count() == 1);
-            insertAsReferenceImage->setEnabled(image() && urls.count() == 1);
-
-            insertManyLayers->setEnabled(image() && urls.count() > 1);
-            insertManyFileLayers->setEnabled(image() && urls.count() > 1);
-            openManyDocuments->setEnabled(urls.count() > 1);
-            insertAsReferenceImages->setEnabled(image() && urls.count() > 1);
-
-            popup.addSeparator();
-            popup.addAction(cancel);
-
-            QAction *action = popup.exec(QCursor::pos());
-            if (action != 0 && action != cancel) {
-                QTemporaryFile *tmp = 0;
-                for (QUrl url : urls) {
-
-                    if (!url.isLocalFile()) {
-                        // download the file and substitute the url
-                        KisRemoteFileFetcher fetcher;
-                        tmp = new QTemporaryFile();
-                        tmp->setAutoRemove(true);
-                        if (!fetcher.fetchFile(url, tmp)) {
-                            qWarning() << "Fetching" << url << "failed";
-                            continue;
-                        }
-                        url = url.fromLocalFile(tmp->fileName());
-                    }
-                    if (url.isLocalFile()) {
-                        if (action == insertAsNewLayer || action == insertManyLayers) {
-                            d->viewManager->imageManager()->importImage(url);
-                            activateWindow();
-                        }
-                        else if (action == insertAsNewFileLayer || action == insertManyFileLayers) {
-                            KisNodeCommandsAdapter adapter(viewManager());
-                            QFileInfo fileInfo(url.toLocalFile());
-                            KisFileLayer *fileLayer = new KisFileLayer(image(), "", url.toLocalFile(),
-                                                                       KisFileLayer::None, fileInfo.fileName(), OPACITY_OPAQUE_U8);
-                            adapter.addNode(fileLayer, viewManager()->activeNode()->parent(), viewManager()->activeNode());
-                        }
-                        else if (action == openInNewDocument || action == openManyDocuments) {
-                            if (mainWindow()) {
-                                mainWindow()->openDocument(url, KisMainWindow::None);
-                            }
-                        }
-                        else if (action == insertAsReferenceImage || action == insertAsReferenceImages) {
-                            auto *reference = KisReferenceImage::fromFile(url.toLocalFile(), d->viewConverter, this);
-
-                            if (reference) {
-                                reference->setPosition(d->viewConverter.imageToDocument(cursorPos));
-                                d->referenceImagesDecoration->addReferenceImage(reference);
-
-                                KoToolManager::instance()->switchToolRequested("ToolReferenceImages");
-                            }
-                        }
-
-                    }
-                    delete tmp;
-                    tmp = 0;
-                }
+            if (event->mimeData()->hasColor()) {
+                resources->setFGColorOverride(KoColor(event->mimeData()->colorData().value<QColor>(), image()->colorSpace()));
+            } else {
+                QByteArray byteData = event->mimeData()->data("krita/x-colorsetentry");
+                KisSwatch s = KisSwatch::fromByteArray(byteData);
+                resources->setFGColorOverride(s.color());
             }
+
+            KisProcessingVisitorSP visitor =
+                new FillProcessingVisitor(resources->image()->projection(),
+                                          QPoint(0, 0), // start position
+                                          selection(),
+                                          resources,
+                                          false, // fast mode
+                                          false,
+                                          true, // fill only selection,
+                                          false,
+                                          0, // feathering radius
+                                          0, // sizemod
+                                          80, // threshold,
+                                          false, // use unmerged
+                                          false // use bg
+                                          );
+
+            applicator.applyVisitor(visitor,
+                                    KisStrokeJobData::SEQUENTIAL,
+                                    KisStrokeJobData::EXCLUSIVE);
+
+            applicator.end();
         }
     }
 }
@@ -694,7 +652,7 @@ bool KisView::queryClose()
 
     if (document()->isModified()) {
         QString name;
-        name = document()->url().fileName();
+        name = QFileInfo(document()->path()).fileName();
 
         if (name.isEmpty())
             name = i18n("Untitled");
@@ -815,7 +773,7 @@ void KisView::syncLastActiveNodeToDocument()
 
 void KisView::saveViewState(KisPropertiesConfiguration &config) const
 {
-    config.setProperty("file", d->document->url());
+    config.setProperty("file", d->document->path());
     config.setProperty("window", mainWindow()->windowStateConfig().name());
 
     if (d->subWindow) {

@@ -6,7 +6,7 @@
 
 #include "kis_mesh_transform_worker_test.h"
 
-#include <QTest>
+#include <simpletest.h>
 
 #include <KoColor.h>
 #include <KoProgressUpdater.h>
@@ -467,8 +467,8 @@ void KisMeshTransformWorkerTest::testIteratorConstness()
     {
         using NodeIndex = KisBezierTransformMesh::NodeIndex;
         using SegmentIndex = KisBezierTransformMesh::SegmentIndex;
-        using ControlPointIndex = KisBezierTransformMesh::ControlPointIndex;
-        using ControlType = KisBezierTransformMesh::ControlType;
+//        using ControlPointIndex = KisBezierTransformMesh::ControlPointIndex;
+//        using ControlType = KisBezierTransformMesh::ControlType;
 
         auto segmentIt = mesh.find(SegmentIndex(NodeIndex(0,0), 1));
 
@@ -488,4 +488,22 @@ void KisMeshTransformWorkerTest::testIteratorConstness()
 
 }
 
-QTEST_MAIN(KisMeshTransformWorkerTest)
+void KisMeshTransformWorkerTest::testLineCurveIntersections()
+{
+
+    QPointF p0(100,100);
+    QPointF p1(110,110);
+    QPointF p2(190,110);
+    QPointF p3(200,100);
+
+    QLineF line(QPointF(110,101), QPointF(160, 101));
+    const qreal eps = 0.001;
+
+    QVector<qreal> result = KisBezierUtils::intersectWithLine(p0, p1, p2, p3, line, eps);
+
+    QCOMPARE(result.size(), 2);
+    QVERIFY(KisAlgebra2D::fuzzyPointCompare(KisBezierUtils::bezierCurve(p0, p1, p2, p3, result[0]), QPointF(101.28,101), eps));
+    QVERIFY(KisAlgebra2D::fuzzyPointCompare(KisBezierUtils::bezierCurve(p0, p1, p2, p3, result[1]), QPointF(198.72,101), eps));
+}
+
+SIMPLE_TEST_MAIN(KisMeshTransformWorkerTest)

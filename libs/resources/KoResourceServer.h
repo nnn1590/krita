@@ -30,6 +30,7 @@
 #include "KoResourcePaths.h"
 #include "ksharedconfig.h"
 
+#include <KisResourceLocator.h>
 #include <KisResourceModel.h>
 #include <KisTagModel.h>
 #include <kis_assert.h>
@@ -127,7 +128,7 @@ public:
             return false;
         }
 
-        if (m_resourceModel->addResource(resource, save ? resource->storageLocation() : "memory")) {
+        if (m_resourceModel->addResource(resource, save ? QString() : "memory")) {
             notifyResourceAdded(resource);
             return true;
         }
@@ -154,7 +155,7 @@ public:
 
     /// Returns path where to save user defined and imported resources to
     QString saveLocation() {
-        return KoResourcePaths::saveLocation(m_type.toLatin1());
+        return KisResourceLocator::instance()->resourceLocationBase() + '/' + m_type;
     }
 
     /**
@@ -163,7 +164,7 @@ public:
      * @param filename file name of the resource file to be imported
      * @param fileCreation decides whether to create the file in the saveLocation() directory
      */
-    bool importResourceFile(const QString &filename)
+    KoResourceSP importResourceFile(const QString &filename)
     {
 
         KIS_SAFE_ASSERT_RECOVER_NOOP(QThread::currentThread() == qApp->thread());
@@ -268,7 +269,7 @@ public:
     }
 
     /**
-     * Call after changing the content of a resource;
+     * Call after changing the content of a resource and saving it;
      * Notifies the connected views.
      */
     void updateResource(QSharedPointer<T> resource)
@@ -283,6 +284,23 @@ public:
         }
         m_resourceModel->updateResource(resource);
         notifyResourceChanged(resource);
+    }
+
+    /**
+     * Reloads the resource from the persistent storage
+     */
+    bool reloadResource(QSharedPointer<T> resource)
+    {
+        KIS_SAFE_ASSERT_RECOVER_NOOP(QThread::currentThread() == qApp->thread());
+        if (QThread::currentThread() != qApp->thread()) {
+            Q_FOREACH(const QString &s, kisBacktrace().split('\n')) {
+                qDebug() << s;
+            }
+        }
+        bool result = m_resourceModel->reloadResource(resource);
+        notifyResourceChanged(resource);
+
+        return result;
     }
 
     QVector<KisTagSP> assignedTagsList(KoResourceSP resource) const

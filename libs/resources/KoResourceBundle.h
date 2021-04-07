@@ -99,11 +99,13 @@ public:
     KoResourceBundleManifest &manifest();
 
     KoResourceSP resource(const QString &resourceType, const QString &filepath);
+    bool loadResource(KoResourceSP resource);
 
     QImage image() const;
 
     QString filename() const;
 
+    QByteArray resourceMd5(const QString &url);
 private:
 
     void writeMeta(const QString &metaTag, KoXmlWriter *writer);

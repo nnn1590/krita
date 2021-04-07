@@ -1,5 +1,6 @@
 /*
  *  SPDX-FileCopyrightText: 2010 Boudewijn Rempt <boud@valdyas.org>
+ *  SPDX-FileCopyrightText: 2021 L. E. Segovia <amy@amyspark.me>
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -19,7 +20,7 @@
 #include <resources/KoAbstractGradient.h>
 #include <KoPattern.h>
 #include "kritapsd_export.h"
-
+#include <KisLinkedResourceWrapper.h>
 
 
 const int MAX_CHANNELS = 56;
@@ -236,15 +237,13 @@ public:
         , m_technique(psd_technique_softer)
         , m_range(100)
         , m_jitter(0)
-        , m_gradient(0)
     {
         for(int i = 0; i < PSD_LOOKUP_TABLE_SIZE; ++i) {
             m_contourLookupTable[i] = i;
         }
     }
 
-    virtual ~psd_layer_effects_shadow_base() {
-    }
+    virtual ~psd_layer_effects_shadow_base();
 
     QPoint calculateOffset(const psd_layer_effects_context *context) const;
 
@@ -332,8 +331,8 @@ public:
         return m_jitter;
     }
 
-    KoAbstractGradientSP gradient() const {
-        return m_gradient;
+    KoAbstractGradientSP gradient(KisResourcesInterfaceSP resourcesInterface) const {
+        return m_gradientWrapper.isValid() ? m_gradientWrapper.resource(resourcesInterface) : KoAbstractGradientSP();
     }
 
 public:
@@ -415,13 +414,10 @@ public:
     }
 
     void setGradient(KoAbstractGradientSP value) {
-        m_gradient = value;
+        m_gradientWrapper = value;
     }
 
-    virtual void scaleLinearSizes(qreal scale) {
-        m_distance *= scale;
-        m_size *= scale;
-    }
+    virtual void scaleLinearSizes(qreal scale);
 
 private:
     // internal
@@ -452,7 +448,7 @@ private:
     psd_technique_type m_technique;
     qint32 m_range;
     qint32 m_jitter;
-    KoAbstractGradientSP m_gradient;
+    KisLinkedResourceWrapper<KoAbstractGradient> m_gradientWrapper;
 };
 
 class KRITAPSD_EXPORT psd_layer_effects_shadow_common : public psd_layer_effects_shadow_base
@@ -473,6 +469,8 @@ public:
     // using psd_layer_effects_shadow_base::setContourLookupTable;
     // using psd_layer_effects_shadow_base::setAntiAliased;
     // using psd_layer_effects_shadow_base::setNoise;
+
+    ~psd_layer_effects_shadow_common() override;
 };
 
 class KRITAPSD_EXPORT psd_layer_effects_drop_shadow : public psd_layer_effects_shadow_common
@@ -483,6 +481,7 @@ public:
     ///        in the classes we don't want
 
     //using psd_layer_effects_shadow_base::setKnocksOut;
+    ~psd_layer_effects_drop_shadow();
 };
 
 // isdw: https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/PhotoshopFileFormats.htm#50577409_22203
@@ -494,6 +493,8 @@ public:
         setInvertsSelection(true);
         setEdgeHidden(false);
     }
+
+    ~psd_layer_effects_inner_shadow() override;
 };
 
 class KRITAPSD_EXPORT psd_layer_effects_glow_common : public psd_layer_effects_shadow_base
@@ -505,7 +506,7 @@ public:
         setBlendMode(COMPOSITE_LINEAR_DODGE);
         setColor(Qt::white);
     }
-
+    ~psd_layer_effects_glow_common() override;
     /// FIXME: 'using' is not supported by MSVC, so please refactor in
     ///        some other way to ensure that the setters are not used
     ///        in the classes we don't want
@@ -530,6 +531,8 @@ public:
 // oglw: https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/PhotoshopFileFormats.htm#50577409_25738
 class KRITAPSD_EXPORT psd_layer_effects_outer_glow : public psd_layer_effects_glow_common
 {
+public:
+    ~psd_layer_effects_outer_glow() override;
 };
 
 // iglw: https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/PhotoshopFileFormats.htm#50577409_27692
@@ -549,6 +552,7 @@ public:
     void setSource(psd_glow_source value) {
         m_source = value;
     }
+    ~psd_layer_effects_inner_glow() override;
 
 private:
     psd_glow_source m_source;
@@ -628,7 +632,6 @@ struct psd_layer_effects_bevel_emboss : public psd_layer_effects_shadow_base
           m_contourRange(100),
 
           m_textureEnabled(false),
-          m_texturePattern(0),
           m_textureScale(100),
           m_textureDepth(100),
           m_textureInvert(false),
@@ -780,11 +783,12 @@ struct psd_layer_effects_bevel_emboss : public psd_layer_effects_shadow_base
         m_textureEnabled = value;
     }
 
-    KoPatternSP texturePattern() const {
-        return m_texturePattern;
+    KoPatternSP texturePattern(KisResourcesInterfaceSP interface) const {
+        return m_texturePatternLink.isValid() ? m_texturePatternLink.resource(interface) : KoPatternSP();
     }
+
     void setTexturePattern(KoPatternSP value) {
-        m_texturePattern = value;
+        m_texturePatternLink = value;
     }
 
     int textureScale() const {
@@ -869,7 +873,7 @@ private:
     int m_contourRange;
 
     bool m_textureEnabled;
-    KoPatternSP m_texturePattern;
+    KisLinkedResourceWrapper<KoPattern> m_texturePatternLink;
     int m_textureScale;
     int m_textureDepth;
     bool m_textureInvert;
@@ -884,11 +888,11 @@ struct psd_layer_effects_overlay_base : public psd_layer_effects_shadow_base
     psd_layer_effects_overlay_base()
         : m_scale(100),
           m_alignWithLayer(true),
+          m_dither(false),
           m_reverse(false),
           m_style(psd_gradient_style_linear),
           m_gradientXOffset(0),
           m_gradientYOffset(0),
-          m_pattern(0),
           m_horizontalPhase(0),
           m_verticalPhase(0)
     {
@@ -910,6 +914,10 @@ struct psd_layer_effects_overlay_base : public psd_layer_effects_shadow_base
         return m_alignWithLayer;
     }
 
+    bool dither() const {
+        return m_dither;
+    }
+
     bool reverse() const {
         return m_reverse;
     }
@@ -926,8 +934,8 @@ struct psd_layer_effects_overlay_base : public psd_layer_effects_shadow_base
         return m_gradientYOffset;
     }
 
-    KoPatternSP pattern() const {
-        return m_pattern;
+    KoPatternSP pattern(KisResourcesInterfaceSP resourcesInterface) const {
+        return m_patternLink.isValid() ? m_patternLink.resource(resourcesInterface) : KoPatternSP();
     }
 
     int horizontalPhase() const {
@@ -949,6 +957,10 @@ public:
         m_alignWithLayer = value;
     }
 
+    void setDither(bool value) {
+        m_dither = value;
+    }
+
     void setReverse(bool value) {
         m_reverse = value;
     }
@@ -967,7 +979,7 @@ public:
     }
 
     void setPattern(KoPatternSP value) {
-        m_pattern = value;
+        m_patternLink = KisLinkedResourceWrapper<KoPattern>(value);
     }
 
     void setPatternPhase(const QPointF &phase) {
@@ -991,13 +1003,14 @@ private:
     bool m_alignWithLayer;
 
     // Gradient
+    bool m_dither;
     bool m_reverse;
     psd_gradient_style m_style;
     int m_gradientXOffset; // 0..100%
     int m_gradientYOffset; // 0..100%
 
     // Pattern
-    KoPatternSP m_pattern;
+    KisLinkedResourceWrapper<KoPattern> m_patternLink;
     int m_horizontalPhase; // 0..100%
     int m_verticalPhase; // 0..100%
 

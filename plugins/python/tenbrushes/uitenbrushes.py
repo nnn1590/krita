@@ -18,9 +18,14 @@ class UITenBrushes(object):
         self.buttonBox = QDialogButtonBox(self.mainDialog)
         self.vbox = QVBoxLayout(self.mainDialog)
         self.hbox = QHBoxLayout(self.mainDialog)
-        self.checkBox = QCheckBox(
-            i18n("&Activate previous brush when pressing the shortcut for the "
+
+        self.checkBoxActivatePrev = QCheckBox(
+            i18n("&Activate previous brush preset when pressing the shortcut for the "
                  "second time"),
+            self.mainDialog)
+
+        self.checkBoxAutoBrush = QCheckBox(
+            i18n("&Select freehand brush tool when pressing a shortcut"),
             self.mainDialog)
 
         self.buttonBox.accepted.connect(self.mainDialog.accept)
@@ -40,12 +45,20 @@ class UITenBrushes(object):
         self.vbox.addLayout(self.hbox)
         self.vbox.addWidget(
             QLabel(i18n("Select the brush preset, then click on the button "
-                        "you want to use to select the preset")))
+                        "you want to use to select the preset.")))
+        self.vbox.addWidget(
+            QLabel(i18n("Shortcuts are configurable through the <i>Keyboard Shortcuts</i> "
+                        "interface in Krita's settings.")))
+
         self.vbox.addWidget(self.presetChooser)
 
-        self.checkBox.setChecked(self.tenbrushes.activatePrev)
-        self.checkBox.toggled.connect(self.setActivatePrev)
-        self.vbox.addWidget(self.checkBox)
+        self.checkBoxActivatePrev.setChecked(self.tenbrushes.activatePrev)
+        self.checkBoxActivatePrev.toggled.connect(self.setActivatePrev)
+        self.vbox.addWidget(self.checkBoxActivatePrev)
+
+        self.checkBoxAutoBrush.setChecked(self.tenbrushes.autoBrush)
+        self.checkBoxAutoBrush.toggled.connect(self.setAutoBrush)
+        self.vbox.addWidget(self.checkBoxAutoBrush)
 
         self.vbox.addWidget(self.buttonBox)
 
@@ -55,6 +68,9 @@ class UITenBrushes(object):
 
     def setActivatePrev(self, checked):
         self.tenbrushes.activatePrev = checked
+
+    def setAutoBrush(self, checked):
+        self.tenbrushes.autoBrush = checked
 
     def loadButtons(self):
         self.tenbrushes.buttons = []

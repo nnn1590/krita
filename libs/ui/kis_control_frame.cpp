@@ -98,7 +98,7 @@ void KisControlFrame::setup(QWidget *parent)
                                                      m_viewManager->mainWindow(), m_viewManager->mainWindow());
     m_dual->setPopDialog(true);
     action = new QWidgetAction(this);
-    action->setText(i18n("&Color"));
+    action->setText(i18n("&Choose foreground and background colors"));
     m_viewManager->actionCollection()->addAction("dual", action);
     action->setDefaultWidget(m_dual);
     connect(m_dual, SIGNAL(foregroundColorChanged(KoColor)), m_viewManager->canvasResourceProvider(), SLOT(slotSetFGColor(KoColor)));
@@ -159,6 +159,7 @@ void KisControlFrame::createPatternsChooser(KisViewManager * view)
 {
     if (m_patternChooserPopup) delete m_patternChooserPopup;
     m_patternChooserPopup = new QWidget(m_patternWidget);
+    m_patternChooserPopup->setMinimumSize(450, 400);
     m_patternChooserPopup->setObjectName("pattern_chooser_popup");
     QHBoxLayout * l2 = new QHBoxLayout(m_patternChooserPopup);
     l2->setObjectName("patternpopuplayout");
@@ -171,6 +172,7 @@ void KisControlFrame::createPatternsChooser(KisViewManager * view)
 
     m_patternChooser = new KisPatternChooser(m_patternChooserPopup);
     m_patternChooser->setFont(m_font);
+    m_patternChooser->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QWidget *patternChooserPage = new QWidget(m_patternChooserPopup);
     QHBoxLayout *patternChooserPageLayout  = new QHBoxLayout(patternChooserPage);
     patternChooserPageLayout->addWidget(m_patternChooser);
@@ -221,26 +223,18 @@ void KisControlFrame::createGradientsChooser(KisViewManager * view)
     m_gradientChooser = new KisGradientChooser(m_gradientChooserPopup);
     m_gradientChooser->setCanvasResourcesInterface(view->canvasResourceProvider()->resourceManager()->canvasResourcesInterface());
     m_gradientChooser->setFont(m_font);
-    m_gradientTab->addTab(m_gradientChooser, i18n("Gradients"));
+    QWidget *gradientChooserPage = new QWidget(m_gradientChooserPopup);
+    QHBoxLayout *gradientChooserPageLayout  = new QHBoxLayout(gradientChooserPage);
+    gradientChooserPageLayout->addWidget(m_gradientChooser);
+    m_gradientTab->addTab(gradientChooserPage, i18n("Gradients"));
 
     connect(m_gradientChooser, SIGNAL(resourceSelected(KoResourceSP)),
             view->canvasResourceProvider(), SLOT(slotGradientActivated(KoResourceSP)));
-
     connect (view->mainWindow(), SIGNAL(themeChanged()), m_gradientChooser, SLOT(slotUpdateIcons()));
-
-    connect(view->canvasResourceProvider(), SIGNAL(sigGradientChanged(KoAbstractGradientSP)),
-            this, SLOT(slotSetGradient(KoAbstractGradientSP)));
-
-    connect(m_gradientChooser, SIGNAL(resourceSelected(KoResourceSP)),
-            view->canvasResourceProvider(), SLOT(slotGradientActivated(KoResourceSP)));
-
-    connect (view->mainWindow(), SIGNAL(themeChanged()), m_gradientChooser, SLOT(slotUpdateIcons()));
-
     connect(view->canvasResourceProvider(), SIGNAL(sigGradientChanged(KoAbstractGradientSP)),
             this, SLOT(slotSetGradient(KoAbstractGradientSP)));
 
     m_gradientChooser->setCurrentItem(0);
-
 
     if (m_gradientChooser->currentResource() && view->canvasResourceProvider())
         view->canvasResourceProvider()->slotGradientActivated(m_gradientChooser->currentResource());

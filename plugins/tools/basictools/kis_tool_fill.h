@@ -28,6 +28,7 @@ class KisDoubleSliderSpinBox;
 class KoCanvasBase;
 class KisColorFilterCombo;
 class KisDummiesFacadeBase;
+class KisAngleSelector;
 
 class KisToolFill : public KisToolPaint
 {
@@ -45,7 +46,7 @@ public:
     QWidget * createOptionWidget() override;
 
 public Q_SLOTS:
-    void activate(ToolActivation toolActivation, const QSet<KoShape*> &shapes) override;
+    void activate(const QSet<KoShape*> &shapes) override;
     void deactivate() override;
     void slotSetUseFastMode(bool);
     void slotSetThreshold(int);
@@ -102,7 +103,7 @@ private:
     KisSliderSpinBox *m_slThreshold;
     KisSliderSpinBox *m_sizemodWidget;
     KisSliderSpinBox *m_featherWidget;
-    KisDoubleSliderSpinBox *m_sldPatternRotate;
+    KisAngleSelector *m_angleSelectorPatternRotate;
     KisDoubleSliderSpinBox *m_sldPatternScale;
     QCheckBox *m_checkUsePattern;
     QCheckBox *m_checkFillSelection;
@@ -126,7 +127,7 @@ public:
     KisToolFillFactory()
             : KisToolPaintFactoryBase("KritaFill/KisToolFill") {
         setToolTip(i18n("Fill Tool"));
-        setSection(TOOL_TYPE_FILL);
+        setSection(ToolBoxSection::Fill);
         setPriority(0);
         setActivationShapeId(KRITA_TOOL_ACTIVATION_ID);
         setIconName(koIconNameCStr("krita_tool_color_fill"));

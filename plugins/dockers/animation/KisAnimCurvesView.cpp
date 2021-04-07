@@ -20,7 +20,7 @@
 #include "kis_scalar_keyframe_channel.h"
 #include "kis_zoom_button.h"
 #include "kis_custom_modifiers_catcher.h"
-#include "krita_utils.h"
+#include <kis_painting_tweaks.h>
 #include "kis_zoom_scrollbar.h"
 
 struct KisAnimCurvesView::Private
@@ -148,7 +148,7 @@ void KisAnimCurvesView::setModel(QAbstractItemModel *model)
             this, &KisAnimCurvesView::slotHeaderDataChanged);
 
     connect(selectionModel(), &QItemSelectionModel::selectionChanged,
-        [this](const QItemSelection& newSelection, const QItemSelection& oldSelection) {
+        [this](const QItemSelection& newSelection, const QItemSelection& /*oldSelection*/) {
             if (newSelection.count() == 0) {
                 activeDataChanged(QModelIndex());
             } else {
@@ -194,15 +194,15 @@ QModelIndex KisAnimCurvesView::indexAt(const QPoint &point) const
     return QModelIndex();
 }
 
-void KisAnimCurvesView::paintEvent(QPaintEvent *e)
+void KisAnimCurvesView::paintEvent(QPaintEvent *event)
 {
     QPainter painter(viewport());
 
-    QRect r = e->rect();
-    r.translate(dirtyRegionOffset());
+    QRect rect = event->rect();
+    rect.translate(dirtyRegionOffset());
 
-    int firstFrame = m_d->horizontalHeader->logicalIndexAt(r.left());
-    int lastFrame = m_d->horizontalHeader->logicalIndexAt(r.right());
+    int firstFrame = m_d->horizontalHeader->logicalIndexAt(rect.left());
+    int lastFrame = m_d->horizontalHeader->logicalIndexAt(rect.right());
     if (lastFrame == -1) lastFrame = model()->columnCount();
 
     paintGrid(painter);
@@ -214,7 +214,7 @@ void KisAnimCurvesView::paintGrid(QPainter &painter)
 {
     const QColor backgroundColor = qApp->palette().window().color();
     const QColor textColor = qApp->palette().text().color();
-    const QColor lineColor = KritaUtils::blendColors(textColor, backgroundColor, 0.1);
+    const QColor lineColor = KisPaintingTweaks::blendColors(textColor, backgroundColor, 0.1);
     const QColor zeroLineColor = qApp->palette().highlight().color();
     const QColor activeFrameColor = KisAnimTimelineColors::instance()->headerActive().color();
 
@@ -222,8 +222,11 @@ void KisAnimCurvesView::paintGrid(QPainter &painter)
     const int visibleFrames = m_d->horizontalHeader->estimateLastVisibleColumn() - m_d->horizontalHeader->estimateFirstVisibleColumn() + 1;
     const int firstVisibleFrame = qMax( m_d->horizontalHeader->estimateFirstVisibleColumn() - 1, 0);
     for (int time = 0; time <= visibleFrames; time++) {
-        const QVariant data = m_d->model->headerData(firstVisibleFrame + time, Qt::Horizontal, KisTimeBasedItemModel::ActiveFrameRole);
+        QVariant data = m_d->model->headerData(firstVisibleFrame + time, Qt::Horizontal, KisTimeBasedItemModel::ActiveFrameRole);
         const bool activeFrame = data.isValid() && data.toBool();
+
+        data = m_d->model->headerData(firstVisibleFrame + time, Qt::Horizontal, KisTimeBasedItemModel::WithinClipRange);
+        const bool withinClipRange = data.isValid() && data.toBool();
 
         const int offsetHori = m_d->horizontalHeader ? m_d->horizontalHeader->offset() : 0;
         const int stepHori = m_d->horizontalHeader->defaultSectionSize();
@@ -234,7 +237,13 @@ void KisAnimCurvesView::paintGrid(QPainter &painter)
         const QPoint top = frameRect.topLeft() + 0.5 * (frameRect.topRight() - frameRect.topLeft());
         const QPoint bottom = frameRect.bottomLeft() + 0.5 * (frameRect.bottomRight() - frameRect.bottomLeft());
 
-        painter.setPen(activeFrame ? activeFrameColor : lineColor);
+        QColor fadedLineColor = lineColor;
+        fadedLineColor.setAlphaF(0.33);
+
+        QColor finalColor = withinClipRange ? lineColor : fadedLineColor;
+        finalColor = activeFrame ? activeFrameColor : finalColor;
+
+        painter.setPen(finalColor);
         painter.drawLine(top, bottom);
     }
 
@@ -459,7 +468,7 @@ bool KisAnimCurvesView::isIndexHidden(const QModelIndex &index) const
     return !index.data(KisAnimCurvesModel::CurveVisibleRole).toBool();
 }
 
-void KisAnimCurvesView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command)
+void KisAnimCurvesView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags flags)
 {
     int timeFrom = m_d->horizontalHeader->logicalIndexAt(rect.left());
     int timeTo = m_d->horizontalHeader->logicalIndexAt(rect.right());
@@ -469,7 +478,10 @@ void KisAnimCurvesView::setSelection(const QRect &rect, QItemSelectionModel::Sel
     int rows = model()->rowCount();
     for (int row=0; row < rows; row++) {
         for (int time = timeFrom; time <= timeTo; time++) {
+
             QModelIndex index = model()->index(row, time);
+
+            if (isIndexHidden(index)) continue;
 
             if (index.data(KisTimeBasedItemModel::SpecialKeyframeExists).toBool()) {
                 QRect itemRect = m_d->itemDelegate->itemRect(index);
@@ -481,7 +493,11 @@ void KisAnimCurvesView::setSelection(const QRect &rect, QItemSelectionModel::Sel
         }
     }
 
-    selectionModel()->select(selection, command);
+    if (!selection.contains(selectionModel()->currentIndex()) && selection.size() > 0) {
+        selectionModel()->setCurrentIndex(selection.first().topLeft(), flags);
+    }
+
+    selectionModel()->select(selection, flags);
     activated(selectionModel()->currentIndex());
 }
 
@@ -507,12 +523,15 @@ void KisAnimCurvesView::mousePressEvent(QMouseEvent *e)
             m_d->dragZooming = true;
             m_d->zoomAnchor = e->pos();
         }
-    } else if (e->button() == Qt::LeftButton) {
+    } else if (e->button() == Qt::LeftButton) { // SELECT
         m_d->dragStart = e->pos();
 
         const int handleClickRadius = 16;
 
         Q_FOREACH(QModelIndex index, selectedIndexes()) {
+
+            if (isIndexHidden(index)) continue;
+
             QPointF center = m_d->itemDelegate->nodeCenter(index, false);
             bool hasLeftHandle = m_d->itemDelegate->hasHandle(index, 0);
             bool hasRightHandle = m_d->itemDelegate->hasHandle(index, 1);
@@ -524,12 +543,12 @@ void KisAnimCurvesView::mousePressEvent(QMouseEvent *e)
                 m_d->isAdjustingHandle = true;
                 m_d->adjustedHandle = 0;
                 setCurrentIndex(index);
-                return;
+                continue;
             } else if (hasRightHandle && (e->localPos() - rightHandle).manhattanLength() < handleClickRadius) {
                 m_d->isAdjustingHandle = true;
                 m_d->adjustedHandle = 1;
                 setCurrentIndex(index);
-                return;
+                continue;
             }
         }
     }
@@ -577,7 +596,8 @@ void KisAnimCurvesView::mouseMoveEvent(QMouseEvent *e)
             viewport()->update();
             return;
         } else if (m_d->isDraggingKeyframe) {
-            m_d->itemDelegate->setSelectedItemVisualOffset(m_d->dragOffset);
+            const bool axisSnap = (e->modifiers() & Qt::ShiftModifier);
+            m_d->itemDelegate->setSelectedItemVisualOffset(m_d->dragOffset, axisSnap);
             viewport()->update();
             return;
         } else if (selectionModel()->hasSelection()) {
@@ -598,9 +618,10 @@ void KisAnimCurvesView::mouseReleaseEvent(QMouseEvent *e)
         m_d->dragZooming = false;
 
         if (m_d->isDraggingKeyframe) {
-            QModelIndexList indices = selectedIndexes();
-            int timeOffset = qRound( qreal(m_d->dragOffset.x()) / m_d->horizontalHeader->defaultSectionSize() );
-            qreal valueOffset = m_d->verticalHeader->pixelsToValueOffset(m_d->dragOffset.y());
+            const QModelIndexList indices = selectedIndexes();
+            const QPointF offset = qAbs(m_d->dragOffset.y()) > qAbs(m_d->dragOffset.x()) ? QPointF(0.0f, m_d->dragOffset.y()) : QPointF(m_d->dragOffset.x(), 0.0f);
+            const int timeOffset = qRound( qreal(offset.x()) / m_d->horizontalHeader->defaultSectionSize() );
+            const qreal valueOffset = m_d->verticalHeader->pixelsToValueOffset(offset.y());
 
             KisAnimCurvesModel *curvesModel = dynamic_cast<KisAnimCurvesModel*>(model());
             curvesModel->adjustKeyframes(indices, timeOffset, valueOffset);
@@ -848,12 +869,8 @@ void KisAnimCurvesView::zoomToFitCurve()
 
     qreal min, max;
     findExtremes(&min, &max);
-    if (min == max) {
-        zoomToFitChannel();
-        return;
-    }
 
-    const qreal padding = (max - min) * 0.1;
+    const qreal padding = (min != max) ? (max - min) * 0.1 : 10.0f;
     m_d->verticalHeader->zoomToFitRange(min - padding, max + padding);
     viewport()->update();
 }
@@ -862,9 +879,12 @@ void KisAnimCurvesView::zoomToFitChannel()
 {
     if (!model()) return;
 
+    const int channels = model()->rowCount();
+
     qreal min = 0;
     qreal max = min;
-    for (int channel = 0; channel < model()->rowCount(); channel++) {
+
+    for (int channel = 0; channel < channels; channel++) {
         QModelIndex index = m_d->model->index(channel, 0);
         QVariant variant = m_d->model->data(index, KisAnimCurvesModel::ChannelLimits);
 
@@ -877,7 +897,10 @@ void KisAnimCurvesView::zoomToFitChannel()
     }
 
     if (min == max)
+    {
+        zoomToFitCurve();
         return;
+    }
 
     const qreal padding = (max - min) * 0.1;
     m_d->verticalHeader->zoomToFitRange(min - padding, max + padding);
