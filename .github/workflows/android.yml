@@ -1,7 +1,9 @@
 name: Build Krita for Android
 
 on:
-  push
+  push:
+    branches-ignore:
+      - github-actions
 
 jobs:
   build-armeabi-v7a:
@@ -17,13 +19,13 @@ jobs:
         sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Get PO files from svn(stable)
       run: |
-        mkdir -p po
-        cd po
-        declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
-        for _po_lang in "${_PO_LANGS[@]}"; do
-          echo ":: ${_po_lang}"
-          svn checkout "svn://anonsvn.kde.org/home/kde/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
-        done
+        #mkdir -p po
+        #cd po
+        #declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
+        #for _po_lang in "${_PO_LANGS[@]}"; do
+        #  echo ":: ${_po_lang}"
+        #  svn checkout "svn://anonsvn.kde.org/home/kde/branches/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
+        #done
     - name: Generate envsetup.sh and mkdir ~/files
       run: |
         cat > envsetup.sh << 'EOF'
@@ -163,13 +165,13 @@ jobs:
         sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Get PO files from svn(stable)
       run: |
-        mkdir -p po
-        cd po
-        declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
-        for _po_lang in "${_PO_LANGS[@]}"; do
-          echo ":: ${_po_lang}"
-          svn checkout "svn://anonsvn.kde.org/home/kde/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
-        done
+        #mkdir -p po
+        #cd po
+        #declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
+        #for _po_lang in "${_PO_LANGS[@]}"; do
+        #  echo ":: ${_po_lang}"
+        #  svn checkout "svn://anonsvn.kde.org/home/kde/branches/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
+        #done
     - name: Generate envsetup.sh and mkdir ~/files
       run: |
         cat > envsetup.sh << 'EOF'
@@ -309,13 +311,13 @@ jobs:
         sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Get PO files from svn(stable)
       run: |
-        mkdir -p po
-        cd po
-        declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
-        for _po_lang in "${_PO_LANGS[@]}"; do
-          echo ":: ${_po_lang}"
-          svn checkout "svn://anonsvn.kde.org/home/kde/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
-        done
+        #mkdir -p po
+        #cd po
+        #declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
+        #for _po_lang in "${_PO_LANGS[@]}"; do
+        #  echo ":: ${_po_lang}"
+        #  svn checkout "svn://anonsvn.kde.org/home/kde/branches/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
+        #done
     - name: Generate envsetup.sh and mkdir ~/files
       run: |
         cat > envsetup.sh << 'EOF'
@@ -455,13 +457,13 @@ jobs:
         sudo apt install perl{,-modules} libio-socket-ssl-perl libyaml{,-libyaml}-perl qt5-default gettext
     - name: Get PO files from svn(stable)
       run: |
-        mkdir -p po
-        cd po
-        declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
-        for _po_lang in "${_PO_LANGS[@]}"; do
-          echo ":: ${_po_lang}"
-          svn checkout "svn://anonsvn.kde.org/home/kde/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
-        done
+        #mkdir -p po
+        #cd po
+        #declare -a _PO_LANGS=('af' 'ar' 'ast' 'be' 'bg' 'br' 'bs' 'ca' 'ca@valencia' 'cs' 'cy' 'da' 'de' 'el' 'en_GB' 'eo' 'es' 'et' 'eu' 'fa' 'fi' 'fr' 'fy' 'ga' 'gl' 'he' 'hi' 'hne' 'hr' 'hu' 'ia' 'is' 'it' 'ja' 'kk' 'km' 'ko' 'lt' 'lv' 'mai' 'mk' 'mr' 'ms' 'nb' 'nds' 'ne' 'nl' 'nn' 'oc' 'pa' 'pl' 'pt' 'pt_BR' 'ro' 'ru' 'se' 'sk' 'sl' 'sq' 'sv' 'ta' 'tg' 'th' 'tr' 'ug' 'uk' 'uz' 'uz@cyrillic' 'vi' 'wa' 'xh' 'zh_CN' 'zh_TW')
+        #for _po_lang in "${_PO_LANGS[@]}"; do
+        #  echo ":: ${_po_lang}"
+        #  svn checkout "svn://anonsvn.kde.org/home/kde/branches/stable/l10n-kf5/${_po_lang}/messages/krita" "${_po_lang}" || true
+        #done
     - name: Generate envsetup.sh and mkdir ~/files
       run: |
         cat > envsetup.sh << 'EOF'
