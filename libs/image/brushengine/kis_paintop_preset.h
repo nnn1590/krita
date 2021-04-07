@@ -1,5 +1,5 @@
 /* This file is part of the KDE project
- * Copyright (C) Boudewijn Rempt <boud@valdyas.org>, (C) 2008
+ * SPDX-FileCopyrightText: 2008 Boudewijn Rempt <boud@valdyas.org>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
  */
@@ -86,10 +86,8 @@ public:
     KisPaintOpSettingsSP settings() const;
     KisPaintOpSettingsSP originalSettings() const;
 
-    bool load(KisResourcesInterfaceSP resourcesInterface) override;
     bool loadFromDevice(QIODevice *dev, KisResourcesInterfaceSP resourcesInterface) override;
 
-    bool save() override;
     bool saveToDevice(QIODevice* dev) const override;
 
     QPair<QString, QString> resourceType() const override

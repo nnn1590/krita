@@ -1,5 +1,6 @@
 /*
  *  SPDX-FileCopyrightText: 2015 Dmitry Kazakov <dimula73@gmail.com>
+ *  SPDX-FileCopyrightText: 2021 L. E. Segovia <amy@amyspark.me>
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -8,14 +9,20 @@
 
 #include <QDomDocument>
 
+#include <KisResourceModel.h>
+#include <KisGlobalResourcesInterface.h>
+
 #include <KoResourceServerProvider.h>
 #include <resources/KoAbstractGradient.h>
 #include <resources/KoSegmentGradient.h>
 #include <resources/KoStopGradient.h>
 #include <resources/KoPattern.h>
 
+#include "kis_layer_utils.h"
 #include "kis_dom_utils.h"
 
+#include <kis_layer.h>
+#include <kis_pointer_utils.h>
 
 #include "psd.h"
 #include "kis_global.h"
@@ -31,6 +38,7 @@
 using namespace std::placeholders;
 
 KisAslLayerStyleSerializer::KisAslLayerStyleSerializer()
+    : m_localResourcesInterface(new KisLocalStrokeResources({}))
 {
 }
 
@@ -55,6 +63,11 @@ void KisAslLayerStyleSerializer::setStyles(const QVector<KisPSDLayerStyleSP> &st
 QHash<QString, KoPatternSP> KisAslLayerStyleSerializer::patterns() const
 {
     return m_patternsStore;
+}
+
+QVector<KoAbstractGradientSP> KisAslLayerStyleSerializer::gradients() const
+{
+    return m_gradientsStore;
 }
 
 QHash<QString, KisPSDLayerStyleSP> KisAslLayerStyleSerializer::stylesHash()
@@ -244,24 +257,24 @@ QString strokeFillTypeToString(psd_fill_type position)
     return result;
 }
 
-QVector<KoPatternSP> KisAslLayerStyleSerializer::fetchAllPatterns(KisPSDLayerStyle *style) const
+QVector<KoPatternSP> KisAslLayerStyleSerializer::fetchAllPatterns(const KisPSDLayerStyle *style)
 {
     QVector <KoPatternSP> allPatterns;
 
     if (style->patternOverlay()->effectEnabled()) {
-        allPatterns << style->patternOverlay()->pattern();
+        allPatterns << style->patternOverlay()->pattern(style->resourcesInterface());
     }
 
     if (style->stroke()->effectEnabled() &&
         style->stroke()->fillType() == psd_fill_pattern) {
 
-        allPatterns << style->stroke()->pattern();
+        allPatterns << style->stroke()->pattern(style->resourcesInterface());
     }
 
     if(style->bevelAndEmboss()->effectEnabled() &&
        style->bevelAndEmboss()->textureEnabled()) {
 
-        allPatterns << style->bevelAndEmboss()->texturePattern();
+        allPatterns << style->bevelAndEmboss()->texturePattern(style->resourcesInterface());
     }
 
     return allPatterns;
@@ -389,9 +402,9 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
             w.writeBoolean("enab", outerGlow->effectEnabled());
             w.writeEnum("Md  ", "BlnM", compositeOpToBlendMode(outerGlow->blendMode()));
 
-            if (outerGlow->fillType() == psd_fill_gradient && outerGlow->gradient()) {
-                KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(outerGlow->gradient().data());
-                KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(outerGlow->gradient().data());
+            if (outerGlow->fillType() == psd_fill_gradient && outerGlow->gradient(style->resourcesInterface())) {
+                KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(outerGlow->gradient(style->resourcesInterface()).data());
+                KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(outerGlow->gradient(style->resourcesInterface()).data());
 
                 if (segmentGradient && segmentGradient->valid()) {
                     w.writeSegmentGradient("Grad", segmentGradient);
@@ -436,13 +449,13 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
             w.writeBoolean("enab", innerGlow->effectEnabled());
             w.writeEnum("Md  ", "BlnM", compositeOpToBlendMode(innerGlow->blendMode()));
 
-            if (innerGlow->fillType() == psd_fill_gradient && innerGlow->gradient()) {
-                KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(innerGlow->gradient().data());
-                KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(innerGlow->gradient().data());
+            if (innerGlow->fillType() == psd_fill_gradient && innerGlow->gradient(style->resourcesInterface())) {
+                KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(innerGlow->gradient(style->resourcesInterface()).data());
+                KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(innerGlow->gradient(style->resourcesInterface()).data());
 
-                if (segmentGradient  && innerGlow->gradient()->valid()) {
+                if (segmentGradient  && innerGlow->gradient(style->resourcesInterface())->valid()) {
                     w.writeSegmentGradient("Grad", segmentGradient);
-                } else if (stopGradient  && innerGlow->gradient()->valid()) {
+                } else if (stopGradient  && innerGlow->gradient(style->resourcesInterface())->valid()) {
                     w.writeStopGradient("Grad", stopGradient);
                 } else {
                     warnKrita << "WARNING: IG: Unknown gradient type!";
@@ -532,7 +545,9 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
                 w.writeBoolean("Algn", bevelAndEmboss->textureAlignWithLayer());
                 w.writeUnitFloat("Scl ", "#Prc", bevelAndEmboss->textureScale());
                 w.writeUnitFloat("textureDepth ", "#Prc", bevelAndEmboss->textureDepth());
-                w.writePatternRef("Ptrn", bevelAndEmboss->texturePattern(), fetchPatternUuidSafe(bevelAndEmboss->texturePattern(), patternToUuidMap));
+
+                KoPatternSP pattern = bevelAndEmboss->texturePattern(style->resourcesInterface());
+                w.writePatternRef("Ptrn", pattern, fetchPatternUuidSafe(pattern, patternToUuidMap));
                 w.writePhasePoint("phase", bevelAndEmboss->texturePhase());
             }
 
@@ -577,8 +592,8 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
 
         // Gradient Overlay
         const psd_layer_effects_gradient_overlay *gradientOverlay = style->gradientOverlay();
-        KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(gradientOverlay->gradient().data());
-        KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(gradientOverlay->gradient().data());
+        KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(gradientOverlay->gradient(style->resourcesInterface()).data());
+        KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(gradientOverlay->gradient(style->resourcesInterface()).data());
 
         if (gradientOverlay->effectEnabled() && ((segmentGradient && segmentGradient->valid()) || (stopGradient && stopGradient->valid()))) {
             w.enterDescriptor("GrFl", "", "GrFl");
@@ -603,8 +618,7 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
 
             w.writeOffsetPoint("Ofst", gradientOverlay->gradientOffset());
 
-            // FIXME: Krita doesn't support dithering
-            w.writeBoolean("Dthr", true/*gradientOverlay->dither()*/);
+            w.writeBoolean("Dthr", gradientOverlay->dither());
 
             w.leaveDescriptor();
         }
@@ -618,7 +632,8 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
             w.writeEnum("Md  ", "BlnM", compositeOpToBlendMode(patternOverlay->blendMode()));
             w.writeUnitFloat("Opct", "#Prc", patternOverlay->opacity());
 
-            w.writePatternRef("Ptrn", patternOverlay->pattern(), fetchPatternUuidSafe(patternOverlay->pattern(), patternToUuidMap));
+            KoPatternSP pattern = patternOverlay->pattern(style->resourcesInterface());
+            w.writePatternRef("Ptrn", pattern, fetchPatternUuidSafe(pattern, patternToUuidMap));
 
             w.writeUnitFloat("Scl ", "#Prc", patternOverlay->scale());
             w.writeBoolean("Algn", patternOverlay->alignWithLayer());
@@ -645,8 +660,8 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
                 w.writeColor("Clr ", stroke->color());
             }
             else if (stroke->fillType() == psd_fill_gradient) {
-                KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(stroke->gradient().data());
-                KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(stroke->gradient().data());
+                KoSegmentGradient *segmentGradient = dynamic_cast<KoSegmentGradient*>(stroke->gradient(style->resourcesInterface()).data());
+                KoStopGradient *stopGradient = dynamic_cast<KoStopGradient*>(stroke->gradient(style->resourcesInterface()).data());
 
                 if (segmentGradient && segmentGradient->valid()) {
                     w.writeSegmentGradient("Grad", segmentGradient);
@@ -665,11 +680,12 @@ QDomDocument KisAslLayerStyleSerializer::formXmlDocument() const
                 w.writeBoolean("Algn", stroke->alignWithLayer());
                 w.writeOffsetPoint("Ofst", stroke->gradientOffset());
 
-                // FIXME: Krita doesn't support dithering
-                w.writeBoolean("Dthr", true/*stroke->dither()*/);
+                w.writeBoolean("Dthr", stroke->dither());
 
             } else if (stroke->fillType() == psd_fill_pattern) {
-                w.writePatternRef("Ptrn", stroke->pattern(), fetchPatternUuidSafe(stroke->pattern(), patternToUuidMap));
+
+                KoPatternSP pattern = stroke->pattern(style->resourcesInterface());
+                w.writePatternRef("Ptrn", pattern, fetchPatternUuidSafe(pattern, patternToUuidMap));
                 w.writeUnitFloat("Scl ", "#Prc", stroke->scale());
                 w.writeBoolean("Lnkd", stroke->alignWithLayer());
                 w.writePhasePoint("phase", stroke->patternPhase());
@@ -722,6 +738,29 @@ QDomDocument KisAslLayerStyleSerializer::formPsdXmlDocument() const
     return doc;
 }
 
+QVector<KoResourceSP> KisAslLayerStyleSerializer::fetchEmbeddedResources(const KisPSDLayerStyle *style)
+{
+    QVector<KoResourceSP> embeddedResources = implicitCastList<KoResourceSP>(fetchAllPatterns(style));
+
+    if (style->gradientOverlay()->effectEnabled()) {
+        embeddedResources << style->gradientOverlay()->gradient(style->resourcesInterface());
+    }
+
+    if (style->innerGlow()->effectEnabled() && style->innerGlow()->fillType() == psd_fill_gradient) {
+        embeddedResources << style->innerGlow()->gradient(style->resourcesInterface());
+    }
+
+    if (style->outerGlow()->effectEnabled() && style->outerGlow()->fillType() == psd_fill_gradient) {
+        embeddedResources << style->outerGlow()->gradient(style->resourcesInterface());
+    }
+
+    if (style->stroke()->effectEnabled() && style->stroke()->fillType() == psd_fill_gradient) {
+        embeddedResources << style->stroke()->gradient(style->resourcesInterface());
+    }
+
+    return embeddedResources;
+}
+
 void KisAslLayerStyleSerializer::saveToDevice(QIODevice *device)
 {
     QDomDocument doc = formXmlDocument();
@@ -729,6 +768,20 @@ void KisAslLayerStyleSerializer::saveToDevice(QIODevice *device)
 
     KisAslWriter writer;
     writer.writeFile(device, doc);
+}
+
+bool KisAslLayerStyleSerializer::saveToFile(const QString& filename)
+{
+    QFile file(filename);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        dbgKrita << "Can't open file " << filename;
+        return false;
+    }
+    saveToDevice(&file);
+    file.close();
+
+    return true;
 }
 
 void convertAndSetBlendMode(const QString &mode,
@@ -849,8 +902,10 @@ inline QString _prepaddr(const QString &pref, const QString &addr) {
     }
 
 #define CONN_GRADIENT(addr, method, object, type, prefix)                      \
-    {                                                                  \
-        m_catcher.subscribeGradient(_prepaddr(prefix, addr), std::bind(&type::method, object, _1)); \
+    {   \
+        boost::function<void (KoAbstractGradientSP)> setter =    \
+            std::bind(&type::method, object, _1);                     \
+        m_catcher.subscribeGradient(_prepaddr(prefix, addr), std::bind(&KisAslLayerStyleSerializer::assignGradientObject, this, _1, setter)); \
     }
 
 #define CONN_PATTERN(addr, method, object, type, prefix)                       \
@@ -865,8 +920,9 @@ void KisAslLayerStyleSerializer::registerPatternObject(const KoPatternSP pattern
     if (m_patternsStore.contains(patternUuid)) {
         warnKrita << "WARNING: ASL style contains a duplicated pattern!" << ppVar(pattern->name()) << ppVar(m_patternsStore[patternUuid]->name());
     } else {
-        pattern->setFilename(patternUuid + QString("_pattern"));
+        pattern->setFilename(patternUuid + QString(".pat"));
         m_patternsStore.insert(patternUuid, pattern);
+        m_localResourcesInterface->addResource(pattern);
     }
 }
 
@@ -893,22 +949,29 @@ void KisAslLayerStyleSerializer::assignPatternObject(const QString &patternUuid,
     setPattern(pattern);
 }
 
+void KisAslLayerStyleSerializer::assignGradientObject(KoAbstractGradientSP gradient, boost::function<void (KoAbstractGradientSP)> setGradient)
+{
+    m_gradientsStore.append(gradient);
+    m_localResourcesInterface->addResource(gradient);
+    setGradient(gradient);
+}
+
 class FillStylesCorrector {
 public:
 
     static void correct(KisPSDLayerStyle *style) {
-        correctWithoutPattern(style->outerGlow());
-        correctWithoutPattern(style->innerGlow());
-        correctWithPattern(style->stroke());
+        correctWithoutPattern(style->outerGlow(), style->resourcesInterface());
+        correctWithoutPattern(style->innerGlow(), style->resourcesInterface());
+        correctWithPattern(style->stroke(), style->resourcesInterface());
     }
 
 private:
 
     template <class T>
-    static void correctWithPattern(T *config) {
-        if (config->pattern()) {
+    static void correctWithPattern(T *config, KisResourcesInterfaceSP resourcesInterface) {
+        if (config->pattern(resourcesInterface)) {
             config->setFillType(psd_fill_pattern);
-        } else if (config->gradient()) {
+        } else if (config->gradient(resourcesInterface)) {
             config->setFillType(psd_fill_gradient);
         } else {
             config->setFillType(psd_fill_solid_color);
@@ -916,8 +979,8 @@ private:
     }
 
     template <class T>
-    static void correctWithoutPattern(T *config) {
-        if (config->gradient()) {
+    static void correctWithoutPattern(T *config, KisResourcesInterfaceSP resourcesInterface) {
+        if (config->gradient(resourcesInterface)) {
             config->setFillType(psd_fill_gradient);
         } else {
             config->setFillType(psd_fill_solid_color);
@@ -1040,7 +1103,7 @@ void KisAslLayerStyleSerializer::connectCatcherToStyle(KisPSDLayerStyle *style, 
     CONN_UNITF("/GrFl/Scl ", "#Prc", setScale, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
     CONN_UNITF("/GrFl/Angl", "#Ang", setAngle, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
     CONN_BOOL("/GrFl/enab", setEffectEnabled, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
-    // CONN_BOOL("/GrFl/Dthr", setDitherNotImplemented, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
+    CONN_BOOL("/GrFl/Dthr", setDither, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
     CONN_BOOL("/GrFl/Rvrs", setReverse, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
     CONN_BOOL("/GrFl/Algn", setAlignWithLayer, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
     CONN_POINT("/GrFl/Ofst", setGradientOffset, gradientOverlay, psd_layer_effects_gradient_overlay, prefix);
@@ -1095,7 +1158,7 @@ void KisAslLayerStyleSerializer::connectCatcherToStyle(KisPSDLayerStyle *style, 
     CONN_BOOL("/FrFX/Rvrs", setReverse, stroke, psd_layer_effects_stroke, prefix);
     CONN_BOOL("/FrFX/Algn", setAlignWithLayer, stroke, psd_layer_effects_stroke, prefix);
     CONN_POINT("/FrFX/Ofst", setGradientOffset, stroke, psd_layer_effects_stroke, prefix);
-    // CONN_BOOL("/FrFX/Dthr", setDitherNotImplemented, stroke, psd_layer_effects_stroke, prefix);
+    CONN_BOOL("/FrFX/Dthr", setDither, stroke, psd_layer_effects_stroke, prefix);
 
     // Pattern type
 
@@ -1171,7 +1234,7 @@ void KisAslLayerStyleSerializer::connectCatcherToStyle(KisPSDLayerStyle *style, 
 
 void KisAslLayerStyleSerializer::newStyleStarted(bool isPsdStructure)
 {
-    m_stylesVector.append(toQShared(new KisPSDLayerStyle()));
+    m_stylesVector.append(toQShared(new KisPSDLayerStyle("", m_localResourcesInterface)));
     KisPSDLayerStyleSP currentStyleSP = m_stylesVector.last();
     KisPSDLayerStyle *currentStyle = currentStyleSP.data();
 
@@ -1196,6 +1259,73 @@ bool KisAslLayerStyleSerializer::readFromFile(const QString& filename)
     file.close();
 
     return true;
+}
+
+QVector<KisPSDLayerStyleSP> KisAslLayerStyleSerializer::collectAllLayerStyles(KisNodeSP root)
+{
+    KisLayer* layer = qobject_cast<KisLayer*>(root.data());
+    QVector<KisPSDLayerStyleSP> layerStyles;
+
+    if (layer && layer->layerStyle()) {
+        KisPSDLayerStyleSP clone = layer->layerStyle()->clone().dynamicCast<KisPSDLayerStyle>();
+        clone->setName(i18nc("Auto-generated layer style name for embedded styles (style itself)", "<%1> (embedded)", layer->name()));
+        layerStyles << clone;
+    }
+
+    KisNodeSP child = root->firstChild();
+    while (child) {
+        layerStyles += collectAllLayerStyles(child);
+        child = child->nextSibling();
+    }
+
+    return layerStyles;
+}
+
+void KisAslLayerStyleSerializer::assignAllLayerStylesToLayers(KisNodeSP root, const QString &storageLocation)
+{
+    QVector<KisPSDLayerStyleSP> styles;
+
+    KisResourceModel stylesModel(ResourceType::LayerStyles);
+    KisResourceModel patternsModel(ResourceType::Patterns);
+    KisResourceModel gradientsModel(ResourceType::Gradients);
+
+    Q_FOREACH(KoPatternSP pattern, patterns().values()) {
+        patternsModel.addResource(pattern, storageLocation);
+    }
+
+    Q_FOREACH(KoAbstractGradientSP gradient, gradients()) {
+        gradientsModel.addResource(gradient, storageLocation);
+    }
+
+    Q_FOREACH (KisPSDLayerStyleSP style, m_stylesVector) {
+        KisPSDLayerStyleSP newStyle = style->clone().dynamicCast<KisPSDLayerStyle>();
+        style->setResourcesInterface(KisGlobalResourcesInterface::instance());
+        stylesModel.addResource(newStyle, storageLocation);
+
+        styles << style;
+    }
+
+    KisLayerUtils::recursiveApplyNodes(root, [styles] (KisNodeSP node) {
+        KisLayer* layer = qobject_cast<KisLayer*>(node.data());
+
+        if (layer && layer->layerStyle()) {
+            QUuid uuid = layer->layerStyle()->uuid();
+
+            bool found = false;
+
+            Q_FOREACH (KisPSDLayerStyleSP style, styles) {
+                if (style->uuid() == uuid) {
+                    layer->setLayerStyle(style->cloneWithResourcesSnapshot());
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                warnKrita << "WARNING: loading layer style for" << layer->name() << "failed! It requests inexistent style:" << uuid;
+            }
+        }
+    });
 }
 
 void KisAslLayerStyleSerializer::readFromDevice(QIODevice *device)

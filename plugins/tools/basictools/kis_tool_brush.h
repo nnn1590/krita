@@ -72,7 +72,7 @@ protected Q_SLOTS:
     void resetCursorStyle() override;
 
 public Q_SLOTS:
-    void activate(ToolActivation toolActivation, const QSet<KoShape*> &shapes) override;
+    void activate(const QSet<KoShape*> &shapes) override;
     void deactivate() override;
     void slotSetSmoothnessDistance(qreal distance);
     void slotSetMagnetism(int magnetism);
@@ -136,11 +136,16 @@ public:
         setToolTip(i18n("Freehand Brush Tool"));
 
         // Temporarily
-        setSection(TOOL_TYPE_SHAPE);
+        setSection(ToolBoxSection::Shape);
         setIconName(koIconNameCStr("krita_tool_freehand"));
         setShortcut(QKeySequence(Qt::Key_B));
         setPriority(0);
         setActivationShapeId(KRITA_TOOL_ACTIVATION_ID);
+    }
+
+    KisToolBrushFactory(const QString &id)
+        : KisToolPaintFactoryBase(id)
+    {
     }
 
     ~KisToolBrushFactory() override {}
@@ -150,6 +155,7 @@ public:
     }
 
     QList<QAction *> createActionsImpl() override;
+    void showFloatingMessage();
 
 };
 

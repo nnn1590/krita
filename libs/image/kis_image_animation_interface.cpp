@@ -30,6 +30,7 @@ struct KisImageAnimationInterface::Private
           cachedLastFrameValue(-1),
           audioChannelMuted(false),
           audioChannelVolume(0.5),
+          exportInitialFrameNumber(-1),
           m_currentTime(0),
           m_currentUITime(0)
     {
@@ -46,6 +47,9 @@ struct KisImageAnimationInterface::Private
           audioChannelFileName(rhs.audioChannelFileName),
           audioChannelMuted(rhs.audioChannelMuted),
           audioChannelVolume(rhs.audioChannelVolume),
+          exportSequenceFilePath(rhs.exportSequenceFilePath),
+          exportSequenceBaseName(rhs.exportSequenceBaseName),
+          exportInitialFrameNumber(rhs.exportInitialFrameNumber),
           m_currentTime(rhs.m_currentTime),
           m_currentUITime(rhs.m_currentUITime)
     {
@@ -63,6 +67,12 @@ struct KisImageAnimationInterface::Private
     bool audioChannelMuted;
     qreal audioChannelVolume;
 
+    QSet<int> activeLayerSelectedTimes;
+
+    QString exportSequenceFilePath;
+    QString exportSequenceBaseName;
+    int exportInitialFrameNumber;
+
     KisSwitchTimeStrokeStrategy::SharedTokenWSP switchToken;
 
     inline int currentTime() const {
@@ -72,6 +82,7 @@ struct KisImageAnimationInterface::Private
     inline int currentUITime() const {
         return m_currentUITime;
     }
+
     inline void setCurrentTime(int value) {
         m_currentTime = value;
     }
@@ -186,6 +197,36 @@ void KisImageAnimationInterface::setAudioChannelFileName(const QString &fileName
     emit sigAudioChannelChanged();
 }
 
+QString KisImageAnimationInterface::exportSequenceFilePath()
+{
+    return m_d->exportSequenceFilePath;
+}
+
+void KisImageAnimationInterface::setExportSequenceFilePath(const QString &filePath)
+{
+    m_d->exportSequenceFilePath = filePath;
+}
+
+QString KisImageAnimationInterface::exportSequenceBaseName()
+{
+    return m_d->exportSequenceBaseName;
+}
+
+void KisImageAnimationInterface::setExportSequenceBaseName(const QString &baseName)
+{
+    m_d->exportSequenceBaseName = baseName;
+}
+
+int KisImageAnimationInterface::exportInitialFrameNumber()
+{
+    return m_d->exportInitialFrameNumber;
+}
+
+void KisImageAnimationInterface::setExportInitialFrameNumber(const int frameNum)
+{
+    m_d->exportInitialFrameNumber = frameNum;
+}
+
 bool KisImageAnimationInterface::isAudioMuted() const
 {
     return m_d->audioChannelMuted;
@@ -206,6 +247,16 @@ void KisImageAnimationInterface::setAudioVolume(qreal value)
 {
     m_d->audioChannelVolume = value;
     emit sigAudioVolumeChanged();
+}
+
+QSet<int> KisImageAnimationInterface::activeLayerSelectedTimes()
+{
+    return m_d->activeLayerSelectedTimes;
+}
+
+void KisImageAnimationInterface::setActiveLayerSelectedTimes(const QSet<int>& times)
+{
+    m_d->activeLayerSelectedTimes = times;
 }
 
 void KisImageAnimationInterface::setFramerate(int fps)
@@ -391,6 +442,18 @@ void KisImageAnimationInterface::invalidateFrames(const KisTimeSpan &range, cons
 {
     m_d->cachedLastFrameValue = -1;
     emit sigFramesChanged(range, rect);
+}
+
+void KisImageAnimationInterface::invalidateFrame(const int time, KisNodeSP target)
+{
+    m_d->cachedLastFrameValue = -1;
+
+    emit sigFramesChanged(KisLayerUtils::fetchLayerActiveRasterFrameSpan(target, time), m_d->image->bounds());
+
+    QSet<int> identicalFrames = KisLayerUtils::fetchLayerIdenticalRasterFrameTimes(target, time);
+    Q_FOREACH(const int& identicalTime, identicalFrames) {
+        emit sigFramesChanged(KisLayerUtils::fetchLayerActiveRasterFrameSpan(target, identicalTime), m_d->image->bounds());
+    }
 }
 
 void KisImageAnimationInterface::blockFrameInvalidation(bool value)

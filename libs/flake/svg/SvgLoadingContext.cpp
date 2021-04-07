@@ -1,4 +1,4 @@
-/* This file is part of the KDE project
+﻿/* This file is part of the KDE project
  * SPDX-FileCopyrightText: 2011 Jan Hambrecht <jaham@gmx.net>
  *
  * SPDX-License-Identifier: LGPL-2.0-or-later
@@ -48,7 +48,7 @@ public:
     int zIndex;
     KoDocumentResourceManager *documentResourceManager;
     QHash<QString, KoShape*> loadedShapes;
-    QHash<QString, KoXmlElement> definitions;
+    QHash<QString, QDomElement> definitions;
     QHash<QString, const KoColorProfile*> profiles;
     SvgCssHelper cssStyles;
     SvgStyleParser *styleParser;
@@ -78,7 +78,7 @@ SvgGraphicsContext *SvgLoadingContext::currentGC() const
 
 #include "parsers/SvgTransformParser.h"
 
-SvgGraphicsContext *SvgLoadingContext::pushGraphicsContext(const KoXmlElement &element, bool inherit)
+SvgGraphicsContext *SvgLoadingContext::pushGraphicsContext(const QDomElement &element, bool inherit)
 {
     SvgGraphicsContext *gc;
     // copy data from current context
@@ -164,10 +164,15 @@ QString SvgLoadingContext::relativeFilePath(const QString &href)
 
     QString result = href;
 
+    QFileInfo info(href);
+    if (info.isRelative())
+        return href;
+
+
     if (!gc->xmlBaseDir.isEmpty()) {
-        result = gc->xmlBaseDir + '/' + href;
+        result = QDir(gc->xmlBaseDir).relativeFilePath(href);
     } else if (!d->initialXmlBaseDir.isEmpty()) {
-        result = d->initialXmlBaseDir + '/' + href;
+        result = QDir(d->initialXmlBaseDir).relativeFilePath(href);
     }
 
     return QDir::cleanPath(result);
@@ -194,7 +199,7 @@ KoShape* SvgLoadingContext::shapeById(const QString &id)
     return d->loadedShapes.value(id);
 }
 
-void SvgLoadingContext::addDefinition(const KoXmlElement &element)
+void SvgLoadingContext::addDefinition(const QDomElement &element)
 {
     const QString id = element.attribute("id");
     if (id.isEmpty() || d->definitions.contains(id))
@@ -202,7 +207,7 @@ void SvgLoadingContext::addDefinition(const KoXmlElement &element)
     d->definitions.insert(id, element);
 }
 
-KoXmlElement SvgLoadingContext::definition(const QString &id) const
+QDomElement SvgLoadingContext::definition(const QString &id) const
 {
     return d->definitions.value(id);
 }
@@ -212,12 +217,12 @@ bool SvgLoadingContext::hasDefinition(const QString &id) const
     return d->definitions.contains(id);
 }
 
-void SvgLoadingContext::addStyleSheet(const KoXmlElement &styleSheet)
+void SvgLoadingContext::addStyleSheet(const QDomElement &styleSheet)
 {
     d->cssStyles.parseStylesheet(styleSheet);
 }
 
-QStringList SvgLoadingContext::matchingCssStyles(const KoXmlElement &element) const
+QStringList SvgLoadingContext::matchingCssStyles(const QDomElement &element) const
 {
     return d->cssStyles.matchStyles(element);
 }
@@ -227,7 +232,7 @@ SvgStyleParser &SvgLoadingContext::styleParser()
     return *d->styleParser;
 }
 
-void SvgLoadingContext::parseProfile(const KoXmlElement &element)
+void SvgLoadingContext::parseProfile(const QDomElement &element)
 {
     const QString href = element.attribute("xlink:href");
     const QByteArray uniqueId = QByteArray::fromHex(element.attribute("local").toLatin1());
@@ -271,6 +276,11 @@ void SvgLoadingContext::parseProfile(const KoXmlElement &element)
     } else {
         debugFlake << "WARNING: couldn't load SVG profile" << ppVar(name) << ppVar(href) << ppVar(uniqueId);
     }
+}
+
+QHash<QString, const KoColorProfile *> SvgLoadingContext::profiles()
+{
+    return d->profiles;
 }
 
 bool SvgLoadingContext::isRootContext() const

@@ -46,6 +46,7 @@
 #include "kis_zoom_button.h"
 #include "kis_signals_blocker.h"
 #include "kis_time_span.h"
+#include <QItemSelection>
 
 KisAnimCurvesDockerTitlebar::KisAnimCurvesDockerTitlebar(QWidget* parent) :
     KisUtilityTitleBar(new QLabel(i18n("Animation Curves"), parent), parent)
@@ -53,7 +54,6 @@ KisAnimCurvesDockerTitlebar::KisAnimCurvesDockerTitlebar(QWidget* parent) :
     // Transport Controls...
     transport = new KisTransportControls(this);
     widgetAreaLayout->addWidget(transport);
-
     widgetAreaLayout->addSpacing(SPACING_UNIT);
 
     // Frame Register...
@@ -62,7 +62,6 @@ KisAnimCurvesDockerTitlebar::KisAnimCurvesDockerTitlebar(QWidget* parent) :
     sbFrameRegister->setPrefix("#  ");
     sbFrameRegister->setRange(0, MAX_FRAMES);
     widgetAreaLayout->addWidget(sbFrameRegister);
-
     widgetAreaLayout->addSpacing(SPACING_UNIT);
 
     {   // Drop Frames..
@@ -90,27 +89,34 @@ KisAnimCurvesDockerTitlebar::KisAnimCurvesDockerTitlebar(QWidget* parent) :
 
         // Add/Remove Key..
         btnAddKey = new QToolButton(this);
+        btnAddKey->setAutoRaise(true);
         layout->addWidget(btnAddKey);
 
         btnRemoveKey = new QToolButton(this);
+        btnRemoveKey->setAutoRaise(true);
         layout->addWidget(btnRemoveKey);
 
         layout->addSpacing(SPACING_UNIT);
 
         // Interpolation Modes..
         btnInterpConstant = new QToolButton(this);
+        btnInterpConstant->setAutoRaise(true);
         layout->addWidget(btnInterpConstant);
         btnInterpLinear = new QToolButton(this);
+        btnInterpLinear->setAutoRaise(true);
         layout->addWidget(btnInterpLinear);
         btnInterpBezier = new QToolButton(this);
+        btnInterpBezier->setAutoRaise(true);
         layout->addWidget(btnInterpBezier);
 
         layout->addSpacing(SPACING_UNIT);
 
         // Tangent Modes..
         btnTangentSharp = new QToolButton(this);
+        btnTangentSharp->setAutoRaise(true);
         layout->addWidget(btnTangentSharp);
         btnTangentSmooth = new QToolButton(this);
+        btnTangentSmooth->setAutoRaise(true);
         layout->addWidget(btnTangentSmooth);
 
         widgetAreaLayout->addWidget(widget);
@@ -127,21 +133,23 @@ KisAnimCurvesDockerTitlebar::KisAnimCurvesDockerTitlebar(QWidget* parent) :
 
     // Zoom buttons..
     btnZoomFitRange = new QToolButton(this);
+    btnZoomFitRange->setAutoRaise(true);
     widgetAreaLayout->addWidget(btnZoomFitRange);
 
     btnZoomFitCurve = new QToolButton(this);
+    btnZoomFitCurve->setAutoRaise(true);
     widgetAreaLayout->addWidget(btnZoomFitCurve);
 
     btnZoomHori = new KisZoomButton(this);
     btnZoomHori->setAutoRaise(true);
     btnZoomHori->setIcon(KisIconUtils::loadIcon("zoom-horizontal"));
-    btnZoomHori->setIconSize(QSize(20, 20)); // this icon is very small on windows if no explicitly set
+    btnZoomHori->setIconSize(QSize(22, 22));
     widgetAreaLayout->addWidget(btnZoomHori);
 
     btnZoomVert = new KisZoomButton(this);
     btnZoomVert->setAutoRaise(true);
     btnZoomVert->setIcon(KisIconUtils::loadIcon("zoom-vertical"));
-    btnZoomVert->setIconSize(QSize(20, 20)); // this icon is very small on windows if no explicitly set
+    btnZoomVert->setIconSize(QSize(22, 22));
     widgetAreaLayout->addWidget(btnZoomVert);
 
     widgetAreaLayout->addStretch();
@@ -156,18 +164,24 @@ KisAnimCurvesDockerTitlebar::KisAnimCurvesDockerTitlebar(QWidget* parent) :
         // Onion skins menu.
         btnOnionSkinsMenu = new QPushButton(KisIconUtils::loadIcon("onion_skin_options"), "", this);
         btnOnionSkinsMenu->setToolTip(i18n("Onion skins menu"));
+        btnOnionSkinsMenu->setIconSize(QSize(22, 22));
+        btnOnionSkinsMenu->setFlat(true);
         layout->addWidget(btnOnionSkinsMenu);
 
         // Audio menu..
         btnAudioMenu = new QPushButton(KisIconUtils::loadIcon("audio-none"), "", this);
-        btnOnionSkinsMenu->setToolTip(i18n("Audio menu"));
+        btnAudioMenu->setToolTip(i18n("Audio menu"));
+        btnAudioMenu->setIconSize(QSize(22, 22));
+        btnAudioMenu->setFlat(true);
         btnAudioMenu->hide(); // (NOTE: Hidden for now while audio features develop.)
         layout->addWidget(btnAudioMenu);
 
         {   // Settings menu..
             btnSettingsMenu = new QToolButton(this);
-            btnSettingsMenu->setIcon(KisIconUtils::loadIcon("configure"));
+            btnSettingsMenu->setIcon(KisIconUtils::loadIcon("view-choose-22"));
             btnSettingsMenu->setToolTip(i18n("Animation settings menu"));
+            btnSettingsMenu->setIconSize(QSize(22, 22));
+            btnSettingsMenu->setAutoRaise(true);
 
             QWidget *settingsMenuWidget = new QWidget(this);
             QHBoxLayout *settingsMenuLayout = new QHBoxLayout(settingsMenuWidget);
@@ -228,6 +242,9 @@ struct KisAnimCurvesDocker::Private
     KisAnimCurvesChannelsModel *channelTreeModel;
     QTreeView *channelTreeView;
 
+    QMenu *channelTreeMenuChannels; //Menu for channels
+    QMenu *channelTreeMenuLayers; //Menu for layers
+
     KisMainWindow *mainWindow;
     QPointer<KisCanvas2> canvas;
     KisSignalAutoConnectionsStore canvasConnections;
@@ -237,8 +254,8 @@ KisAnimCurvesDocker::KisAnimCurvesDocker()
     : QDockWidget(i18n("Animation Curves"))
     , m_d(new Private(this))
 {
-    QWidget *mainWidget = new QWidget(this);
-    mainWidget->setLayout(new QVBoxLayout(this));
+    QWidget *mainWidget = new QWidget(0);
+    mainWidget->setLayout(new QVBoxLayout());
     setWidget(mainWidget);
 
     QSplitter *mainSplitter = new QSplitter(this);
@@ -250,6 +267,27 @@ KisAnimCurvesDocker::KisAnimCurvesDocker()
         m_d->channelTreeView->setHeaderHidden(true);
         KisAnimCurvesChannelDelegate *listDelegate = new KisAnimCurvesChannelDelegate(this);
         m_d->channelTreeView->setItemDelegate(listDelegate);
+
+        //Right click menu configuration for Channel Tree
+        m_d->channelTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(m_d->channelTreeView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(requestChannelMenuAt(QPoint)));
+
+        m_d->channelTreeMenuChannels = new QMenu(this);
+        m_d->channelTreeMenuChannels->addSection(i18n("Channel Operations"));
+        m_d->channelTreeMenuLayers = new QMenu(this);
+        m_d->channelTreeMenuLayers->addSection(i18n("Layer Operations"));
+
+        { //Channels Menu
+            QAction* action = new QAction(i18n("Reset Channel"), this);
+            connect(action, SIGNAL(triggered(bool)), this, SLOT(resetChannelTreeSelection()));
+            m_d->channelTreeMenuChannels->addAction(action);
+        }
+
+        { //Layers Menu
+            QAction* action = new QAction(i18n("Reset All Channels"), this);
+            connect(action, SIGNAL(triggered(bool)), this, SLOT(resetChannelTreeSelection()));
+            m_d->channelTreeMenuLayers->addAction(action);
+        }
     }
 
     {   // Curves View..
@@ -371,10 +409,13 @@ void KisAnimCurvesDocker::setCanvas(KoCanvasBase *canvas)
                                                       activeIndex.data(KisAnimCurvesModel::ScalarValueRole).toReal() : 0.0f);
         }
 
+        connect(m_d->titlebar->transport, SIGNAL(skipBack()), m_d->canvas->animationPlayer(), SLOT(previousKeyframe()));
         connect(m_d->titlebar->transport, SIGNAL(back()), m_d->canvas->animationPlayer(), SLOT(previousFrame()));
         connect(m_d->titlebar->transport, SIGNAL(stop()), m_d->canvas->animationPlayer(), SLOT(stop()));
         connect(m_d->titlebar->transport, SIGNAL(playPause()), m_d->canvas->animationPlayer(), SLOT(playPause()));
         connect(m_d->titlebar->transport, SIGNAL(forward()), m_d->canvas->animationPlayer(), SLOT(nextFrame()));
+        connect(m_d->titlebar->transport, SIGNAL(skipForward()), m_d->canvas->animationPlayer(), SLOT(nextKeyframe()));
+
         connect(m_d->titlebar->sbFrameRegister, SIGNAL(valueChanged(int)), m_d->canvas->animationPlayer(), SLOT(seek(int)));
         connect(m_d->titlebar->sbSpeed, SIGNAL(valueChanged(int)), m_d->canvas->animationPlayer(), SLOT(setPlaybackSpeedPercent(int)));
 
@@ -408,17 +449,19 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
 
     KisActionManager* actionManager = view->actionManager();
 
-    KisAction* action = actionManager->createAction("insert_opacity_keyframe");
+    KisAction* action = actionManager->createAction("add_scalar_keyframes");
     action->setIcon(KisIconUtils::loadIcon("keyframe-add"));
     connect(action, SIGNAL(triggered(bool)),
-            this, SLOT(slotAddOpacityKey()));
+            this, SLOT(slotAddAllEnabledKeys()));
     m_d->titlebar->btnAddKey->setDefaultAction(action);
+    m_d->titlebar->btnAddKey->setIconSize(QSize(22, 22));
 
-    action = actionManager->createAction("remove_opacity_keyframe");
+    action = actionManager->createAction("remove_scalar_keyframe");
     action->setIcon(KisIconUtils::loadIcon("keyframe-remove"));
     connect(action, SIGNAL(triggered(bool)),
-            this, SLOT(slotRemoveOpacityKey()));
+            this, SLOT(slotRemoveSelectedKeys()));
     m_d->titlebar->btnRemoveKey->setDefaultAction(action);
+    m_d->titlebar->btnRemoveKey->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("interpolation_constant");
     action->setIcon(KisIconUtils::loadIcon("interpolation_constant"));
@@ -426,6 +469,7 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::applyConstantMode);
     m_d->titlebar->btnInterpConstant->setDefaultAction(action);
+    m_d->titlebar->btnInterpConstant->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("interpolation_linear");
     action->setIcon(KisIconUtils::loadIcon("interpolation_linear"));
@@ -433,6 +477,7 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::applyLinearMode);
     m_d->titlebar->btnInterpLinear->setDefaultAction(action);
+    m_d->titlebar->btnInterpLinear->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("interpolation_bezier");
     action->setIcon(KisIconUtils::loadIcon("interpolation_bezier"));
@@ -440,6 +485,7 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::applyBezierMode);
     m_d->titlebar->btnInterpBezier->setDefaultAction(action);
+    m_d->titlebar->btnInterpBezier->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("tangents_sharp");
     action->setIcon(KisIconUtils::loadIcon("interpolation_sharp"));
@@ -447,6 +493,7 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::applySharpMode);
     m_d->titlebar->btnTangentSharp->setDefaultAction(action);
+    m_d->titlebar->btnTangentSharp->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("tangents_smooth");
     action->setIcon(KisIconUtils::loadIcon("interpolation_smooth"));
@@ -454,6 +501,7 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::applySmoothMode);
     m_d->titlebar->btnTangentSmooth->setDefaultAction(action);
+    m_d->titlebar->btnTangentSmooth->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("zoom_to_fit_range");
     action->setIcon(KisIconUtils::loadIcon("zoom-fit"));
@@ -461,6 +509,7 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::zoomToFitChannel);
     m_d->titlebar->btnZoomFitRange->setDefaultAction(action);
+    m_d->titlebar->btnZoomFitRange->setIconSize(QSize(22, 22));
 
     action = actionManager->createAction("zoom_to_fit_curve");
     action->setIcon(KisIconUtils::loadIcon("zoom-fit-curve"));
@@ -468,10 +517,12 @@ void KisAnimCurvesDocker::setViewManager(KisViewManager *view)
     connect(action, &KisAction::triggered,
             m_d->curvesView, &KisAnimCurvesView::zoomToFitCurve);
     m_d->titlebar->btnZoomFitCurve->setDefaultAction(action);
+    m_d->titlebar->btnZoomFitCurve->setIconSize(QSize(22, 22));
 
     {
         action = actionManager->createAction("drop_frames");
         m_d->titlebar->btnDropFrames->setDefaultAction(action);
+        m_d->titlebar->btnDropFrames->setIconSize(QSize(22, 22));
         connect(action, &KisAction::triggered, [](bool dropFrames){
             KisConfig cfg(false);
             if (dropFrames != cfg.animationDropFrames()) {
@@ -525,7 +576,17 @@ void KisAnimCurvesDocker::slotScrollerStateChanged(QScroller::State state)
 void KisAnimCurvesDocker::slotNodeActivated(KisNodeSP node)
 {
     if (!node) return;
-    m_d->titlebar->btnAddKey->setEnabled(node->supportsKeyframeChannel(KisKeyframeChannel::Opacity.id()));
+    bool supported = node->supportsKeyframeChannel(KisKeyframeChannel::Opacity.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::PositionX.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::PositionY.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::ScaleX.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::ScaleY.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::ShearX.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::ShearY.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::RotationX.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::RotationY.id()) ||
+            node->supportsKeyframeChannel(KisKeyframeChannel::RotationZ.id());
+    m_d->titlebar->btnAddKey->setEnabled(supported);
 }
 
 void KisAnimCurvesDocker::updateFrameRegister(){
@@ -581,6 +642,42 @@ void KisAnimCurvesDocker::slotAddAllEnabledKeys()
     if (node->supportsKeyframeChannel(KisKeyframeChannel::Opacity.id())) {
         addKeyframe(KisKeyframeChannel::Opacity.id());
     }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::PositionX.id())) {
+        addKeyframe(KisKeyframeChannel::PositionX.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::PositionY.id())) {
+        addKeyframe(KisKeyframeChannel::PositionY.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::ScaleX.id())) {
+        addKeyframe(KisKeyframeChannel::ScaleX.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::ScaleY.id())) {
+        addKeyframe(KisKeyframeChannel::ScaleY.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::ShearX.id())) {
+        addKeyframe(KisKeyframeChannel::ShearX.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::ShearY.id())) {
+        addKeyframe(KisKeyframeChannel::ShearY.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::RotationX.id())) {
+        addKeyframe(KisKeyframeChannel::RotationX.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::RotationY.id())) {
+        addKeyframe(KisKeyframeChannel::RotationY.id());
+    }
+
+    if (node->supportsKeyframeChannel(KisKeyframeChannel::RotationZ.id())) {
+        addKeyframe(KisKeyframeChannel::RotationZ.id());
+    }
 }
 
 void KisAnimCurvesDocker::slotAddOpacityKey()
@@ -595,12 +692,54 @@ void KisAnimCurvesDocker::slotAddOpacityKey()
     }
 }
 
+
+void KisAnimCurvesDocker::slotRemoveSelectedKeys()
+{
+    KIS_SAFE_ASSERT_RECOVER_RETURN(m_d->canvas && m_d->canvas->viewManager());
+
+    KisNodeSP node = m_d->canvas->viewManager()->activeNode();
+    KIS_SAFE_ASSERT_RECOVER_RETURN(node);
+
+
+    QItemSelectionModel* selectionModel = m_d->curvesView->selectionModel();
+    QModelIndexList selected = selectionModel ? selectionModel->selectedIndexes() : QModelIndexList();
+
+
+    if (selected.count() > 0) {
+        Q_FOREACH(const QModelIndex& selection, selected) {
+            QVariant data = selection.data(KisAnimCurvesModel::ChannelIdentifier);
+
+            if (!data.isValid())
+                continue;
+
+            const QString identifier = data.toString();
+            const int time = selection.column();
+            KisAnimUtils::removeKeyframe(m_d->canvas->image(), node, identifier, time);
+        }
+    } else {
+        const int time = m_d->canvas->image()->animationInterface()->currentTime();
+        for(int channelIndex = 0; channelIndex < m_d->curvesModel->rowCount(); channelIndex++) {
+            QModelIndex chanIndex = m_d->curvesModel->index(channelIndex, time);
+            if (!chanIndex.isValid())
+                continue;
+
+            QVariant data = chanIndex.data(KisAnimCurvesModel::ChannelIdentifier);
+            if (!data.isValid())
+                continue;
+
+            const QString identifier = data.toString();
+            KisAnimUtils::removeKeyframe(m_d->canvas->image(), node, identifier, time);
+        }
+    }
+}
+
 void KisAnimCurvesDocker::slotRemoveOpacityKey()
 {
     KIS_SAFE_ASSERT_RECOVER_RETURN(m_d->canvas && m_d->canvas->viewManager());
 
     KisNodeSP node = m_d->canvas->viewManager()->activeNode();
     KIS_SAFE_ASSERT_RECOVER_RETURN(node);
+
     if (node->supportsKeyframeChannel(KisKeyframeChannel::Opacity.id())) {
         removeKeyframe(KisKeyframeChannel::Opacity.id());
     }
@@ -620,6 +759,7 @@ void KisAnimCurvesDocker::slotValueRegisterChanged(double value){
         return;
 
     QModelIndex current = m_d->curvesView->currentIndex();
+
     if (current.isValid() && m_d->curvesView->indexHasKey(current)) {
         m_d->curvesModel->setData(current, value, KisAnimCurvesModel::ScalarValueRole);
     }
@@ -627,11 +767,32 @@ void KisAnimCurvesDocker::slotValueRegisterChanged(double value){
 
 void KisAnimCurvesDocker::slotActiveNodeUpdate(const QModelIndex index)
 {
+    KisSignalsBlocker blockSignal(m_d->titlebar->sbValueRegister);
+
     if (index.isValid() && m_d->curvesView->indexHasKey(index)) {
         QVariant variant = m_d->curvesModel->data(index, KisAnimCurvesModel::ScalarValueRole);
         m_d->titlebar->sbValueRegister->setEnabled(variant.isValid());
         m_d->titlebar->sbValueRegister->setValue(variant.isValid() ? variant.toReal() : 0.0);
     } else {
         m_d->titlebar->sbValueRegister->setEnabled(false);
+    }
+}
+
+void KisAnimCurvesDocker::requestChannelMenuAt(const QPoint &point)
+{
+    QModelIndex selected = m_d->channelTreeView->selectionModel()->selectedIndexes().first();
+
+    if (selected.data(KisAnimCurvesChannelsModel::CurveRole).toBool()) {
+        m_d->channelTreeMenuChannels->popup(m_d->channelTreeView->mapToGlobal(point));
+    } else {
+        m_d->channelTreeMenuLayers->popup(m_d->channelTreeView->mapToGlobal(point));
+    }
+}
+
+void KisAnimCurvesDocker::resetChannelTreeSelection()
+{
+    QList<QModelIndex> selected = m_d->channelTreeView->selectionModel()->selectedIndexes();
+    Q_FOREACH( const QModelIndex& index, selected) {
+        m_d->channelTreeModel->reset(index);
     }
 }

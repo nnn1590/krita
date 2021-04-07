@@ -76,11 +76,12 @@ public:
     /**
      * @brief purge purges the local resource cache
      */
-    void purge();
+    void purge(const QString &storageLocation);
 
     /**
      * @brief addStorage Adds a new resource storage to the database. The storage is
-     * will be marked as not pre-installed.
+     * will be marked as not pre-installed. If there is already a storage with the
+     * given location, it will first be removed.
      * @param storageLocation a unique name for the given storage
      * @param storage a storage object
      * @return true if the storage has been added successfully
@@ -89,7 +90,7 @@ public:
 
     /**
      * @brief removeStorage removes the temporary storage from the database
-     * @param document the unique name of the document
+     * @param storageLocation the unique name of the storage
      * @return true is successful.
      */
     bool removeStorage(const QString &storageLocation);
@@ -127,6 +128,12 @@ private:
     /// @return true if the resource is present in the cache, false if it hasn't been loaded
     bool resourceCached(QString storageLocation, const QString &resourceType, const QString &filename) const;
 
+    /// add the thumbnail associated with resouceId to cache
+    void cacheThumbnail(QString storageLocation, const QString &resourceType, const QString &filename, const QImage &img);
+
+    /// @return a valid image if the thumbnail is present in the cache, an invalid image otherwise
+    QImage thumbnailCached(QString storageLocation, const QString &resourceType, const QString &filename);
+
     /**
      * @brief resource finds a physical resource in one of the storages
      * @param storageLocation the storage containing the resource. If empty,
@@ -162,9 +169,9 @@ private:
      * @param resourceType
      * @param fileName
      * @param storageLocation: optional, the storage where the resource will be stored. Empty means in the default Folder storage.
-     * @return
+     * @return the imported resource, which has been added to the database and the cache
      */
-    bool importResourceFromFile(const QString &resourceType, const QString &fileName, const QString &storageLocation = QString());
+    KoResourceSP importResourceFromFile(const QString &resourceType, const QString &fileName, const QString &storageLocation = QString());
 
     /**
      * @brief addResource adds the given resource to the database and potentially a storage
@@ -182,6 +189,15 @@ private:
      * @return
      */
     bool updateResource(const QString &resourceType, const KoResourceSP resource);
+
+    /**
+     * @brief Reloads the resource from its persistent storage
+     * @param resourceType the type of the resource
+     * @param resource the actual resource object
+     * @return true if reloading was successful. When returned false,
+     *         \p resource is kept unchanged
+     */
+    bool reloadResource(const QString &resourceType, const KoResourceSP resource);
 
     /**
      * @brief metaDataForResource

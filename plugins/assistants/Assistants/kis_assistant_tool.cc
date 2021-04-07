@@ -56,20 +56,15 @@ KisAssistantTool::~KisAssistantTool()
 {
 }
 
-void KisAssistantTool::activate(ToolActivation toolActivation, const QSet<KoShape*> &shapes)
+void KisAssistantTool::activate(const QSet<KoShape*> &shapes)
 {
 
-    KisTool::activate(toolActivation, shapes);
+    KisTool::activate(shapes);
 
     m_canvas->paintingAssistantsDecoration()->activateAssistantsEditor();
     m_handles = m_canvas->paintingAssistantsDecoration()->handles();
 
-    m_handleDrag = 0;
     m_internalMode = MODE_CREATION;
-    m_assistantHelperYOffset = 10;
-
-
-    m_handleSize = 17;
     m_canvas->paintingAssistantsDecoration()->setHandleSize(m_handleSize);
 
 
@@ -994,9 +989,12 @@ QWidget *KisAssistantTool::createOptionWidget()
         specialSpacer->setFixedSize(0, 0);
         m_optionsWidget->layout()->addWidget(specialSpacer);
 
-        m_options.loadAssistantButton->setIcon(KisIconUtils::loadIcon("document-open"));
-        m_options.saveAssistantButton->setIcon(KisIconUtils::loadIcon("document-save"));
+        m_options.loadAssistantButton->setIcon(KisIconUtils::loadIcon("folder"));
+        m_options.loadAssistantButton->setIconSize(QSize(16, 16));
+        m_options.saveAssistantButton->setIcon(KisIconUtils::loadIcon("document-save-16"));
+        m_options.saveAssistantButton->setIconSize(QSize(16, 16));
         m_options.deleteAllAssistantsButton->setIcon(KisIconUtils::loadIcon("edit-delete"));
+        m_options.deleteAllAssistantsButton->setIconSize(QSize(16, 16));
 
         QList<KoID> assistants;
         Q_FOREACH (const QString& key, KisPaintingAssistantFactoryRegistry::instance()->keys()) {

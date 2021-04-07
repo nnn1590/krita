@@ -503,6 +503,9 @@ QVariant KisNodeModel::data(const QModelIndex &index, int role) const
 
         return result;
     }
+    case KisNodeModel::IsAnimatedRole: {
+        return node->isAnimated();
+    }
     default:
         if (role >= int(KisNodeModel::BeginThumbnailRole) && belongsToIsolatedGroup(node)) {
 
@@ -642,6 +645,8 @@ QStringList KisNodeModel::mimeTypes() const
     QStringList types;
     types << QLatin1String("application/x-krita-node");
     types << QLatin1String("application/x-qt-image");
+    types << QLatin1String("application/x-color");
+    types << QLatin1String("krita/x-colorsetentry");
     return types;
 }
 

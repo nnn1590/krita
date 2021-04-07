@@ -130,8 +130,8 @@ void KisPresetDelegate::paint(QPainter * painter, const QStyleOptionViewItem & o
     }
 
     if (m_useDirtyPresets && dirty) {
-        const QIcon icon = KisIconUtils::loadIcon(koIconName("dirty-preset"));
-        QPixmap pixmap = icon.pixmap(QSize(15,15));
+        const QIcon icon = KisIconUtils::loadIcon("dirty-preset");
+        QPixmap pixmap = icon.pixmap(QSize(16,16));
         painter->drawPixmap(paintRect.x() + 3, paintRect.y() + 3, pixmap);
     }
 
@@ -301,10 +301,12 @@ KisResourceItemChooser *KisPresetChooser::itemChooser()
 
 void KisPresetChooser::setPresetFilter(const QString& paintOpId)
 {
-   QMap<QString, QVariant> metaDataFilter;
-   metaDataFilter["paintopid"] = paintOpId;
-   m_chooser->tagFilterModel()->setMetaDataFilter(metaDataFilter);
-   updateViewSettings();
+    QMap<QString, QVariant> metaDataFilter;
+    if (!paintOpId.isEmpty()) { // empty means "all"
+        metaDataFilter["paintopid"] = paintOpId;
+    }
+    m_chooser->tagFilterModel()->setMetaDataFilter(metaDataFilter);
+    updateViewSettings();
 }
 
 void KisPresetChooser::setIconSize(int newSize)

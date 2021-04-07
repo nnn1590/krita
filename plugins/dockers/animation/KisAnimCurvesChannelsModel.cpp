@@ -13,7 +13,9 @@
 #include "kis_node_view_color_scheme.h"
 #include "kis_scalar_keyframe_channel.h"
 #include "kis_signal_auto_connection.h"
-#include "krita_utils.h"
+#include <kis_painting_tweaks.h>
+#include "kis_image.h"
+#include "KisAnimUtils.h"
 
 #include <QApplication>
 
@@ -128,6 +130,46 @@ void KisAnimCurvesChannelsModel::selectedNodesChanged(const KisNodeList &nodes)
     }
 }
 
+void KisAnimCurvesChannelsModel::reset(const QModelIndex &index)
+{
+    const quintptr parentRow = index.internalId();
+    const bool indexIsNode = (parentRow == ID_NODE);
+
+    if (indexIsNode) {
+        NodeListItem *item = m_d->itemForRow(index.row());
+
+        KisNodeSP node = item->dummy->node();
+        if (!node || !node->image())
+            return;
+
+        KisImageSP image = node->image().toStrongRef();
+
+        QList<KisAnimationCurve*> curves = item->curves;
+        QList<QString> ids;
+        Q_FOREACH( const KisAnimationCurve* curve, curves ) {
+            ids << curve->channel()->id();
+        }
+
+        KisAnimUtils::resetChannels(image, node, ids);
+
+    } else {
+        NodeListItem *item = m_d->itemForRow(parentRow);
+
+        KisAnimationCurve* curve = item->curves.at(index.row());
+
+        if (!curve)
+            return;
+
+        KisNodeSP node = item->dummy->node();
+
+        if (!node || !node->image())
+            return;
+
+        KisImageSP image = node->image().toStrongRef();
+        KisAnimUtils::resetChannel(image, node, curve->channel()->id());
+    }
+}
+
 void KisAnimCurvesChannelsModel::keyframeChannelAddedToNode(KisKeyframeChannel *channel)
 {
     KisNodeDummy *dummy = m_d->dummiesFacade->dummyForNode(KisNodeSP(channel->node()));
@@ -217,8 +259,8 @@ int KisAnimCurvesChannelsModel::columnCount(const QModelIndex &parent) const
 
 QVariant KisAnimCurvesChannelsModel::data(const QModelIndex &index, int role) const
 {
-    quintptr parentRow = index.internalId();
-    bool indexIsNode = (parentRow == ID_NODE);
+    const quintptr parentRow = index.internalId();
+    const bool indexIsNode = (parentRow == ID_NODE);
     NodeListItem *item = m_d->itemForRow(indexIsNode ? index.row() : parentRow);
 
     switch (role) {
@@ -265,7 +307,7 @@ QVariant KisAnimCurvesChannelsModel::data(const QModelIndex &index, int role) co
         const QColor backgroundColor = qApp->palette().color(QPalette::Button);
         const int colorLabelIndex = item->dummy->node()->colorLabelIndex();
         const QColor nodeColor = nodeColorScheme.colorFromLabelIndex(colorLabelIndex);
-        return colorLabelIndex > 0 ? KritaUtils::blendColors(nodeColor, backgroundColor, 0.3) : backgroundColor;
+        return colorLabelIndex > 0 ? KisPaintingTweaks::blendColors(nodeColor, backgroundColor, 0.3) : backgroundColor;
     }
     default:
         break;

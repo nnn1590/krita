@@ -41,9 +41,10 @@ private:
     void updateDistance();
 
     double m_resolution;
-    QLabel* m_distanceLabel;
     QLabel* m_angleLabel;
     double m_distance;
+public:
+    QLabel* m_distanceLabel;
     KoUnit m_unit;
 };
 
@@ -59,6 +60,7 @@ public:
     void beginPrimaryAction(KoPointerEvent *event) override;
     void continuePrimaryAction(KoPointerEvent *event) override;
     void endPrimaryAction(KoPointerEvent *event) override;
+    void showDistanceAngleOnCanvas();
 
     void paint(QPainter& gc, const KoViewConverter &converter) override;
 
@@ -95,7 +97,7 @@ public:
 
     KisToolMeasureFactory()
             : KoToolFactoryBase("KritaShape/KisToolMeasure") {
-        setSection(TOOL_TYPE_VIEW);
+        setSection(ToolBoxSection::View);
         setToolTip(i18n("Measure Tool"));
         setIconName(koIconNameCStr("krita_tool_measure"));
         setPriority(1);

@@ -21,6 +21,7 @@
 
 #include <KoResource.h>
 #include <KisKineticScroller.h>
+#include "KisPopupButton.h"
 
 class QAbstractProxyModel;
 class QAbstractItemDelegate;
@@ -99,7 +100,7 @@ public:
     void setStoragePopupButtonVisible(bool visible);
     
     void setViewModeButtonVisible(bool visible);
-    QToolButton *viewModeButton() const;
+    KisPopupButton *viewModeButton() const;
 
     void setSynced(bool sync);
 
@@ -116,13 +117,15 @@ Q_SIGNALS:
 public Q_SLOTS:
     void slotButtonClicked(int button);
     void slotScrollerStateChanged(QScroller::State state){ KisKineticScroller::updateCursor(this, state); }
+    void updateView();
 
 private Q_SLOTS:
     void activated(const QModelIndex &index);
     void clicked(const QModelIndex &index);
     void contextMenuRequested(const QPoint &pos);
     void baseLengthChanged(int length);
-    void updateView();
+    void beforeFilterChanges();
+    void afterFilterChanged();
 
 protected:
     void showEvent(QShowEvent *event) override;

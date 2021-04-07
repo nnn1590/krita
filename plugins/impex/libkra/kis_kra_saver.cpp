@@ -49,6 +49,7 @@
 #include "kis_grid_config.h"
 #include "kis_guides_config.h"
 #include "KisProofingConfiguration.h"
+#include "kis_asl_layer_style_serializer.h"
 
 #include <KisMirrorAxisConfig.h>
 
@@ -60,20 +61,27 @@ using namespace KRA;
 
 struct KisKraSaver::Private
 {
-public:
     KisDocument* doc;
     QMap<const KisNode*, QString> nodeFileNames;
     QMap<const KisNode*, QString> keyframeFilenames;
     QString imageName;
     QString filename;
     QStringList errorMessages;
+    QStringList specialAnnotations;
+    bool addMergedImage;
+
+    Private() {
+        specialAnnotations << "exif" << "icc";
+    }
+
 };
 
-KisKraSaver::KisKraSaver(KisDocument* document, const QString &filename)
-        : m_d(new Private)
+KisKraSaver::KisKraSaver(KisDocument* document, const QString &filename, bool addMergedImage)
+    : m_d(new Private)
 {
     m_d->doc = document;
     m_d->filename = filename;
+    m_d->addMergedImage = addMergedImage;
 
     m_d->imageName = m_d->doc->documentInfo()->aboutInfo("title");
     if (m_d->imageName.isEmpty()) {
@@ -115,7 +123,7 @@ QDomElement KisKraSaver::saveXML(QDomDocument& doc,  KisImageSP image)
     }
 
     quint32 count = 1; // We don't save the root layer, but it does count
-    KisSaveXmlVisitor visitor(doc, imageElement, count, m_d->doc->url().toLocalFile(), true);
+    KisSaveXmlVisitor visitor(doc, imageElement, count, m_d->doc->path(), true);
     visitor.setSelectedNodes({m_d->doc->preActivatedNode()});
 
     image->rootLayer()->accept(visitor);
@@ -135,11 +143,38 @@ QDomElement KisKraSaver::saveXML(QDomDocument& doc,  KisImageSP image)
     saveAudio(doc, imageElement);
     savePalettesToXML(doc, imageElement);
 
+    // Redundancy -- Save animation metadata in XML to prevent data loss for the time being...
     QDomElement animationElement = doc.createElement("animation");
     KisDomUtils::saveValue(&animationElement, "framerate", image->animationInterface()->framerate());
     KisDomUtils::saveValue(&animationElement, "range", image->animationInterface()->fullClipRange());
     KisDomUtils::saveValue(&animationElement, "currentTime", image->animationInterface()->currentUITime());
     imageElement.appendChild(animationElement);
+
+    vKisAnnotationSP_it beginIt = image->beginAnnotations();
+    vKisAnnotationSP_it endIt = image->endAnnotations();
+
+    if (beginIt != endIt) {
+        QDomElement annotationsElement = doc.createElement(ANNOTATIONS);
+        vKisAnnotationSP_it it = beginIt;
+        while (it != endIt) {
+            if (!(*it) || (*it)->type().isEmpty()) {
+                it++;
+                continue;
+            }
+            QString type = (*it)->type();
+
+            if (!m_d->specialAnnotations.contains(type)) {
+                QString description = (*it)->description();
+                QDomElement annotationElement = doc.createElement(ANNOTATION);
+                annotationsElement.appendChild(annotationElement);
+                annotationElement.setAttribute("type", type);
+                annotationElement.setAttribute("description", description);
+            }
+            it++;
+        }
+        imageElement.appendChild(annotationsElement);
+    }
+
 
     return imageElement;
 }
@@ -158,19 +193,26 @@ bool KisKraSaver::savePalettes(KoStore *store, KisImageSP image, const QString &
         palette->setPaletteType(KoColorSet::KPL);
 
         if (!store->open(m_d->imageName + PALETTE_PATH + palette->filename())) {
-            m_d->errorMessages << i18n("could not save palettes");
+            m_d->errorMessages << i18nc("Error message when saving a .kra file", "Could not save palettes.");
             return false;
         }
 
         QByteArray ba = palette->toByteArray();
 
+        qDebug() << "Storing palette inside document" << palette->colorCount();
+
+        qint64 nwritten = 0;
         if (!ba.isEmpty()) {
-            store->write(ba);
+            nwritten = store->write(ba);
         } else {
             qWarning() << "Cannot save the palette to a byte array:" << palette->name();
         }
-        store->close();
-        res = true;
+        res = store->close();
+        res = res && (nwritten == ba.size());
+    }
+
+    if (!res) {
+        m_d->errorMessages << i18nc("Error message when saving a .kra file", "Could not save palettes.");
     }
 
     return res;
@@ -181,11 +223,12 @@ bool KisKraSaver::saveStoryboard(KoStore *store, KisImageSP image, const QString
     Q_UNUSED(image);
     Q_UNUSED(uri);
 
+    bool success = true;
     if (m_d->doc->getStoryboardItemList().count() == 0) {
         return true;
     } else {
         if (!store->open(m_d->imageName + STORYBOARD_PATH + "index.xml")) {
-            m_d->errorMessages << i18n("could not save storyboards");
+            m_d->errorMessages << i18nc("Error message when saving a .kra file", "Could not save storyboards.");
             return false;
         }
 
@@ -194,13 +237,57 @@ bool KisKraSaver::saveStoryboard(KoStore *store, KisImageSP image, const QString
         saveStoryboardToXML(storyboardDocument, root);
 
         QByteArray ba = storyboardDocument.toByteArray();
+        qint64 nwritten = 0;
         if (!ba.isEmpty()) {
-            store->write(ba);
+            nwritten = store->write(ba);
         } else {
+            success = false;
             qWarning() << "Could not save storyboard data to a byte array!";
         }
 
-        store->close();
+        bool r = store->close();
+        success = success && r && (nwritten == ba.size());
+    }
+
+    if (!success) {
+        m_d->errorMessages << i18nc("Error message when saving a .kra file", "Could not save storyboards.");
+        return false;
+    }
+
+    return success;
+}
+
+bool KisKraSaver::saveAnimationMetadata(KoStore *store, KisImageSP image, const QString &uri)
+{
+    Q_UNUSED(uri);
+
+    if (!store->open(m_d->imageName + ANIMATION_METADATA_PATH + "index.xml")) {
+        m_d->errorMessages << i18nc("Error message when saving a .kra file", "Could not save animation meta data.");
+        return false;
+    }
+
+    QDomDocument animationDocument = m_d->doc->createDomDocument("animation-metadata", "1.1");
+    QDomElement root = animationDocument.documentElement();
+    saveAnimationMetadataToXML(animationDocument, root, image);
+
+    bool success = true;
+
+    QByteArray ba = animationDocument.toByteArray();
+    qint64 nwritten = 0;
+    if (!ba.isEmpty()) {
+        nwritten = store->write(ba);
+    } else {
+        qWarning() << "Could not save animation meta data to a byte array!";
+        success = false;
+    }
+
+    bool r = store->close();
+
+    success = success && r && (nwritten == ba.size());
+
+    if (!success) {
+        m_d->errorMessages << i18nc("Error message when saving a .kra file", "Could not save animation meta data.");
+        return false;
     }
 
     return true;
@@ -219,7 +306,7 @@ void KisKraSaver::savePalettesToXML(QDomDocument &doc, QDomElement &element)
     element.appendChild(ePalette);
 }
 
-void KisKraSaver:: saveStoryboardToXML(QDomDocument& doc, QDomElement &element)
+void KisKraSaver::saveStoryboardToXML(QDomDocument& doc, QDomElement &element)
 {
     //saving storyboard comments
     QDomElement eCommentList = doc.createElement("StoryboardCommentList");
@@ -238,6 +325,21 @@ void KisKraSaver:: saveStoryboardToXML(QDomDocument& doc, QDomElement &element)
         eItemList.appendChild(eItem);
     }
     element.appendChild(eItemList);
+}
+
+void KisKraSaver::saveAnimationMetadataToXML(QDomDocument &doc, QDomElement &element, KisImageSP image)
+{
+    KisDomUtils::saveValue(&element, "framerate", image->animationInterface()->framerate());
+    KisDomUtils::saveValue(&element, "range", image->animationInterface()->fullClipRange());
+    KisDomUtils::saveValue(&element, "currentTime", image->animationInterface()->currentUITime());
+
+    {
+        QDomElement exportItemElem = doc.createElement("export-settings");
+        KisDomUtils::saveValue(&exportItemElem, "sequenceFilePath", image->animationInterface()->exportSequenceFilePath());
+        KisDomUtils::saveValue(&exportItemElem, "sequenceBaseName", image->animationInterface()->exportSequenceBaseName());
+        KisDomUtils::saveValue(&exportItemElem, "sequenceInitialFrameNumber", image->animationInterface()->exportInitialFrameNumber());
+        element.appendChild(exportItemElem);
+    }
 }
 
 bool KisKraSaver::saveKeyframes(KoStore *store, const QString &uri, bool external)
@@ -271,19 +373,24 @@ bool KisKraSaver::saveNodeKeyframes(KoStore *store, QString location, const KisN
         root.appendChild(element);
     }
 
+    bool success = true;
     if (store->open(location)) {
         QByteArray xml = doc.toByteArray();
-        store->write(xml);
-        store->close();
+        qint64 nwritten = store->write(xml);
+        bool r = store->close();
+        success = r && (nwritten == xml.size());
     } else {
-        m_d->errorMessages << i18n("could not save keyframes");
+        success = false;
+    }
+    if (!success) {
+        m_d->errorMessages << i18nc("Error message on saving a .kra file", "Could not save keyframes.");
         return false;
     }
 
     return true;
 }
 
-bool KisKraSaver::saveBinaryData(KoStore* store, KisImageSP image, const QString &uri, bool external, bool autosave)
+bool KisKraSaver::saveBinaryData(KoStore* store, KisImageSP image, const QString &uri, bool external, bool addMergedImage)
 {
     QString location;
 
@@ -300,19 +407,32 @@ bool KisKraSaver::saveBinaryData(KoStore* store, KisImageSP image, const QString
         return false;
     }
 
+    bool success = true;
+    bool r = true;
+    qint64 nwritten = 0;
+
     // saving annotations
-    // XXX this only saves EXIF and ICC info. This would probably need
-    // a redesign of the dtd of the krita file to do this more generally correct
-    // e.g. have <ANNOTATION> tags or so.
+    bool savingAnnotationsSuccess = true;
     KisAnnotationSP annotation = image->annotation("exif");
     if (annotation) {
         location = external ? QString() : uri;
         location += m_d->imageName + EXIF_PATH;
         if (store->open(location)) {
-            store->write(annotation->annotation());
-            store->close();
+            nwritten = store->write(annotation->annotation());
+            r = store->close();
+            savingAnnotationsSuccess = savingAnnotationsSuccess && (nwritten == annotation->annotation().size()) && r;
+        } else {
+            savingAnnotationsSuccess = false;
         }
     }
+
+    if (!savingAnnotationsSuccess) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save annotations."));
+    }
+
+    success = success && savingAnnotationsSuccess;
+
+    bool savingImageProfileSuccess = true;
     if (image->profile()) {
         const KoColorProfile *profile = image->profile();
         KisAnnotationSP annotation;
@@ -331,13 +451,22 @@ bool KisKraSaver::saveBinaryData(KoStore* store, KisImageSP image, const QString
             location = external ? QString() : uri;
             location += m_d->imageName + ICC_PATH;
             if (store->open(location)) {
-                store->write(annotation->annotation());
-                store->close();
+                nwritten = store->write(annotation->annotation());
+                r = store->close();
+                savingImageProfileSuccess = savingImageProfileSuccess && (nwritten == annotation->annotation().size()) && r;
+            } else {
+                savingImageProfileSuccess = false;
             }
         }
     }
 
+    if (!savingImageProfileSuccess) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save image profile."));
+    }
+    success = success && savingImageProfileSuccess;
+
     //This'll embed the profile used for proofing into the kra file.
+    bool savingSoftproofingProfileSuccess = true;
     if (image->proofingConfiguration()) {
         if (image->proofingConfiguration()->storeSoftproofingInsideImage) {
             const KoColorProfile *proofingProfile = KoColorSpaceRegistry::instance()->profileByName(image->proofingConfiguration()->proofingProfile);
@@ -351,47 +480,109 @@ bool KisKraSaver::saveBinaryData(KoStore* store, KisImageSP image, const QString
                 location = external ? QString() : uri;
                 location += m_d->imageName + ICC_PROOFING_PATH;
                 if (store->open(location)) {
-                    store->write(annotation->annotation());
-                    store->close();
+                    nwritten = store->write(annotation->annotation());
+                    r = store->close();
+                    savingSoftproofingProfileSuccess = savingSoftproofingProfileSuccess && (nwritten == annotation->annotation().size()) && r;
+                } else {
+                    savingSoftproofingProfileSuccess = false;
                 }
             }
         }
     }
 
-    {
-        warnKrita << "WARNING: Asl Layer Styles cannot be written (part of resource rewrite).";
-        // TODO: RESOURCES: needs implementation
+    if (!savingSoftproofingProfileSuccess) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save softproofing color profile."));
+    }
 
-        /*
-        KisPSDLayerStyleCollectionResource collection("not-nexists.asl");
-        KIS_ASSERT_RECOVER_NOOP(!collection.valid());
-        collection.collectAllLayerStyles(image->root());
-        if (collection.valid()) {
+    success = success && savingSoftproofingProfileSuccess;
+
+    // Save the remaining annotations
+    vKisAnnotationSP_it beginIt = image->beginAnnotations();
+    vKisAnnotationSP_it endIt = image->endAnnotations();
+
+    bool savingRemainingAnnotationsSuccess = true;
+    if (beginIt != endIt) {
+        vKisAnnotationSP_it it = beginIt;
+        while (it != endIt) {
+            if (!(*it) || (*it)->type().isEmpty()) {
+                it++;
+                continue;
+            }
+            QString type = (*it)->type();
+
+            if (!m_d->specialAnnotations.contains(type)) {
+                location = external ? QString() : uri;
+                location += m_d->imageName + ANNOTATIONS_PATH + type;
+                if (store->open(location)) {
+                    nwritten = store->write((*it)->annotation());
+                    r = store->close();
+                    savingRemainingAnnotationsSuccess = savingRemainingAnnotationsSuccess && (nwritten == (*it)->annotation().size()) && r;
+                } else {
+                    savingRemainingAnnotationsSuccess = false;
+                }
+            }
+            it++;
+        }
+    }
+
+    if (!savingRemainingAnnotationsSuccess) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save additional annotations."));
+    }
+
+    success = success && savingRemainingAnnotationsSuccess;
+
+    bool savingLayerStylesSuccess = true;
+    {
+        KisAslLayerStyleSerializer serializer;
+        QVector<KisPSDLayerStyleSP> stylesClones = serializer.collectAllLayerStyles(image->root());
+        if (stylesClones.size() > 0) {
             location = external ? QString() : uri;
             location += m_d->imageName + LAYER_STYLES_PATH;
 
             if (store->open(location)) {
                 QBuffer aslBuffer;
-                aslBuffer.open(QIODevice::WriteOnly);
-                collection.saveToDevice(&aslBuffer);
-                aslBuffer.close();
-
-                store->write(aslBuffer.buffer());
-                store->close();
+                if (aslBuffer.open(QIODevice::WriteOnly)) {
+                    serializer.setStyles(stylesClones);
+                    serializer.saveToDevice(&aslBuffer);
+                    aslBuffer.close();
+                    nwritten = store->write(aslBuffer.buffer());
+                    savingLayerStylesSuccess = savingLayerStylesSuccess && (nwritten == aslBuffer.buffer().size());
+                } else {
+                    savingLayerStylesSuccess = false;
+                }
+                r = store->close();
+                savingLayerStylesSuccess = savingLayerStylesSuccess && r;
+            } else {
+                savingLayerStylesSuccess = false;
             }
         }
-        */
     }
 
-    if (!autosave) {
+    if (!savingLayerStylesSuccess) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save layer styles."));
+    }
+
+    success = success && savingLayerStylesSuccess;
+
+    bool savingMergedImageSuccess = true;
+    if (addMergedImage) {
         KisPaintDeviceSP dev = image->projection();
         store->setCompressionEnabled(false);
-        KisPNGConverter::saveDeviceToStore("mergedimage.png", image->bounds(), image->xRes(), image->yRes(), dev, store);
+        r = KisPNGConverter::saveDeviceToStore("mergedimage.png", image->bounds(), image->xRes(), image->yRes(), dev, store);
+        savingMergedImageSuccess = savingMergedImageSuccess && r;
         store->setCompressionEnabled(KisConfig(true).compressKra());
     }
 
-    saveAssistants(store, uri,external);
-    return true;
+    if (!savingMergedImageSuccess) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save merged image."));
+    }
+
+    success = success && savingMergedImageSuccess;
+
+    r = saveAssistants(store, uri,external);
+    success = success && r;
+
+    return success;
 }
 
 QStringList KisKraSaver::errorMessages() const
@@ -447,6 +638,8 @@ bool KisKraSaver::saveAssistants(KoStore* store, QString uri, bool external)
 
     QList<KisPaintingAssistantSP> assistants =  m_d->doc->assistants();
     QMap<KisPaintingAssistantHandleSP, int> handlemap;
+
+    bool success = true;
     if (!assistants.isEmpty()) {
 
         Q_FOREACH (KisPaintingAssistantSP assist, assistants){
@@ -458,12 +651,18 @@ bool KisKraSaver::saveAssistants(KoStore* store, QString uri, bool external)
             location += QString(assist->id()+"%1.assistant").arg(assistantcounters[assist->id()]);
 
             data = assist->saveXml(handlemap);
-            store->open(location);
-            store->write(data);
-            store->close();
+            if (store->open(location)) {
+                qint64 nwritten = store->write(data);
+                bool r = store->close();
+                success = success && r && (nwritten == data.size());
+            } else {
+                success = false;
+            }
             assistantcounters[assist->id()]++;
         }
-
+    }
+    if (!success) {
+        m_d->errorMessages.append(i18nc("Saving .kra file error message", "Could not save assistants."));
     }
     return true;
 }

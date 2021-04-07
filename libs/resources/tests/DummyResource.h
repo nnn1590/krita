@@ -24,6 +24,9 @@ public:
             quint64 v = qrg.generate64();
             ba[i] = v;
         }
+
+        m_something = QString::fromUtf8(ba);
+
         QByteArray hash = KoMD5Generator::generateHash(ba);
         setMD5(hash);
 
@@ -45,13 +48,6 @@ public:
         return KoResourceSP(new DummyResource(*this));
     }
 
-    bool load(KisResourcesInterfaceSP resourcesInterface) override
-    {
-        Q_UNUSED(resourcesInterface);
-        setValid(true);
-        return true;
-    }
-
     bool loadFromDevice(QIODevice *dev, KisResourcesInterfaceSP resourcesInterface) override
     {
         Q_UNUSED(resourcesInterface);
@@ -61,11 +57,6 @@ public:
         }
         m_something = QString::fromUtf8(dev->readAll());
         setValid(true);
-        return true;
-    }
-
-    bool save() override
-    {
         return true;
     }
 

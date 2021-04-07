@@ -40,21 +40,13 @@ public:
 
     static KoResourceServerProvider* instance();
 
-    /**
-     * @brief blacklistFileNames filters the filenames with the list of blacklisted file names
-     * @param fileNames all files
-     * @param blacklistedFileNames the files we don't want
-     * @return the result
-     */
-    static QStringList blacklistFileNames(QStringList fileNames, const QStringList &blacklistedFileNames);
-
-    KoResourceServer<KoPattern> *patternServer();
-    KoResourceServer<KoAbstractGradient> *gradientServer();
-    KoResourceServer<KoColorSet> *paletteServer();
-    KoResourceServer<KoSvgSymbolCollectionResource> *svgSymbolCollectionServer();
-    KoResourceServer<KoGamutMask> *gamutMaskServer();
+    static KoResourceServer<KoPattern> *patternServer();
+    static KoResourceServer<KoAbstractGradient> *gradientServer();
+    static KoResourceServer<KoColorSet> *paletteServer();
+    static KoResourceServer<KoSvgSymbolCollectionResource> *svgSymbolCollectionServer();
+    static KoResourceServer<KoGamutMask> *gamutMaskServer();
 #if defined HAVE_SEEXPR
-    KoResourceServer<KisSeExprScript> *seExprScriptServer();
+    static KoResourceServer<KisSeExprScript> *seExprScriptServer();
 #endif
 
 private:

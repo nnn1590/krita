@@ -39,6 +39,11 @@ public:
     void cancel();
     bool isStrokeRunning() const;
 
+    bool isIdle() const;
+
+    void setFilterAllSelectedFrames(bool filterAllSelectedFrames);
+    bool filterAllSelectedFrames();
+
 private Q_SLOTS:
 
     void insertFilter(const QString &name);

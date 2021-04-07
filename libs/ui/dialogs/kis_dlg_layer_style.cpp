@@ -32,6 +32,7 @@
 #include "kis_signals_blocker.h"
 #include "kis_signal_compressor.h"
 #include "kis_canvas_resource_provider.h"
+#include <KisGlobalResourcesInterface.h>
 
 #include <KoFileDialog.h>
 #include <QMessageBox>
@@ -270,9 +271,32 @@ void KisDlgLayerStyle::slotNewStyle()
                               QLineEdit::Normal, i18nc("Default name for a new style", "New Style"));
 
     KisPSDLayerStyleSP style = this->style();
-    style->setName(selectAvailableStyleName(styleName));
+    KisPSDLayerStyleSP clone = style->clone().dynamicCast<KisPSDLayerStyle>();
+    style->setName(styleName);
+    clone->setName(styleName);
+    clone->setUuid(QUuid::createUuid());
+    clone->setFilename(clone->uuid().toString());
+    clone->setValid(true);
+    m_stylesSelector->addNewStyle(clone);
+    const QString customStylesStorageLocation = "asl/CustomStyles.asl";
+    KisConfig cfg(true);
+    QString resourceDir = cfg.readEntry<QString>(KisResourceLocator::resourceLocationKey,
+                                            QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    QString storagePath = resourceDir + "/" + customStylesStorageLocation;
 
-    m_stylesSelector->addNewStyle(style->clone().dynamicCast<KisPSDLayerStyle>());
+
+    if (KisResourceLocator::instance()->hasStorage(storagePath)) {
+        KisResourceModel model(ResourceType::LayerStyles);
+        model.addResource(clone, storagePath);
+
+    } else {
+        KisAslLayerStyleSerializer serializer;
+        serializer.setStyles(QVector<KisPSDLayerStyleSP>() << clone);
+        serializer.saveToFile(storagePath);
+        QSharedPointer<KisResourceStorage> storage = QSharedPointer<KisResourceStorage>(new KisResourceStorage(storagePath));
+        KisResourceLocator::instance()->addStorage(storagePath, storage);
+    }
+
 }
 
 QString createNewAslPath(QString resourceFolderPath, QString filename)
@@ -316,14 +340,11 @@ void KisDlgLayerStyle::slotLoadStyle()
     KisResourceStorageSP storage = QSharedPointer<KisResourceStorage>::create(newLocation);
     KIS_ASSERT(!storage.isNull());
     KisResourceLocator::instance()->addStorage(newLocation, storage);
+    m_stylesSelector->refillCollections();
 }
 
 void KisDlgLayerStyle::slotSaveStyle()
 {
-    // TODO RESOURCES: needs figuring out
-    warnKrita << "Layer style cannot be saved; needs figuring out what to do here";
-
-    /*
     QString filename; // default value?
 
     KoFileDialog dialog(this, KoFileDialog::SaveFile, "layerstyle");
@@ -331,17 +352,14 @@ void KisDlgLayerStyle::slotSaveStyle()
     dialog.setMimeTypeFilters(QStringList() << "application/x-photoshop-style-library", "application/x-photoshop-style-library");
     filename = dialog.filename();
 
-    QScopedPointer<KisPSDLayerStyleCollectionResource> collection(
-        new KisPSDLayerStyleCollectionResource(filename));
+    QSharedPointer<KisAslLayerStyleSerializer> serializer = QSharedPointer<KisAslLayerStyleSerializer>(new KisAslLayerStyleSerializer());
 
     KisPSDLayerStyleSP newStyle = style()->clone().dynamicCast<KisPSDLayerStyle>();
     newStyle->setName(QFileInfo(filename).completeBaseName());
-
-    KisPSDLayerStyleCollectionResource::StylesVector vector = collection->layerStyles();
-    vector << newStyle;
-    collection->setLayerStyles(vector);
-    collection->save();
-    */
+    QVector<KisPSDLayerStyleSP> styles;
+    styles << newStyle;
+    serializer->setStyles(styles);
+    serializer->saveToFile(filename);
 }
 
 void KisDlgLayerStyle::changePage(QListWidgetItem *current, QListWidgetItem *previous)
@@ -537,7 +555,6 @@ StylesSelector::StylesSelector(QWidget *parent)
 
     connect(ui.cmbStyleCollections, SIGNAL(activated(QString)), this, SLOT(loadStyles(QString)));
     connect(ui.listStyles, SIGNAL(clicked(QModelIndex)), this, SLOT(selectStyle(QModelIndex)));
-    connect(m_resourceModel, SIGNAL(afterResourcesLayoutReset()), this, SLOT(slotResourceModelReset()));
 
     refillCollections();
 
@@ -652,8 +669,6 @@ void StylesSelector::slotResourceModelReset()
 
 void StylesSelector::addNewStyle(KisPSDLayerStyleSP style)
 {
-    KoResourceServer<KisPSDLayerStyle> *server = KisResourceServerProvider::instance()->layerStyleServer();
-    server->addResource(style);
 
     // TODO: RESOURCES: what about adding only to CustomStyles.asl
 
@@ -670,7 +685,7 @@ void StylesSelector::addNewStyle(KisPSDLayerStyleSP style)
     KisPSDLayerStyleSP style;
 
     if (!resource) {
-        collection = KisPSDLayerStyleSP(new KisPSDLayerStyle(""));
+        collection = KisPSDLayerStyleSP(new KisPSDLayerStyle());
         collection->setName(customName);
         collection->setFilename(fullFilename);
 
@@ -808,7 +823,7 @@ void BevelAndEmboss::setBevelAndEmboss(const psd_layer_effects_bevel_emboss *bev
     m_contour->ui.chkAntiAliased->setChecked(bevelAndEmboss->antiAliased());
     m_contour->ui.intRange->setValue(bevelAndEmboss->contourRange());
 
-    m_texture->ui.patternChooser->setCurrentPattern(bevelAndEmboss->texturePattern());
+    m_texture->ui.patternChooser->setCurrentPattern(bevelAndEmboss->texturePattern(KisGlobalResourcesInterface::instance()));
     m_texture->ui.intScale->setValue(bevelAndEmboss->textureScale());
     m_texture->ui.intDepth->setValue(bevelAndEmboss->textureDepth());
     m_texture->ui.chkInvert->setChecked(bevelAndEmboss->textureInvert());
@@ -1079,6 +1094,8 @@ GradientOverlay::GradientOverlay(KisCanvasResourceProvider *resourceProvider, QW
 
     ui.intScale->setRange(0, 100);
     ui.intScale->setSuffix(i18n(" %"));
+    
+    ui.angleSelector->angleSelector()->setResetAngle(90.0);
 
     ui.cmbGradient->setCanvasResourcesInterface(resourceProvider->resourceManager()->canvasResourcesInterface());
 
@@ -1091,6 +1108,7 @@ GradientOverlay::GradientOverlay(KisCanvasResourceProvider *resourceProvider, QW
     connect(ui.cmbStyle, SIGNAL(currentIndexChanged(int)), SIGNAL(configChanged()));
     connect(ui.chkAlignWithLayer, SIGNAL(toggled(bool)), SIGNAL(configChanged()));
     connect(ui.intScale, SIGNAL(valueChanged(int)), SIGNAL(configChanged()));
+    connect(ui.chkDither, SIGNAL(toggled(bool)), SIGNAL(configChanged()));
 }
 
 void GradientOverlay::setGradientOverlay(const psd_layer_effects_gradient_overlay *config)
@@ -1098,7 +1116,7 @@ void GradientOverlay::setGradientOverlay(const psd_layer_effects_gradient_overla
     ui.cmbCompositeOp->selectCompositeOp(KoID(config->blendMode()));
     ui.intOpacity->setValue(config->opacity());
 
-    KoAbstractGradientSP gradient = fetchGradientLazy(GradientPointerConverter::styleToResource(config->gradient()), m_resourceProvider);
+    KoAbstractGradientSP gradient = fetchGradientLazy(GradientPointerConverter::styleToResource(config->gradient(KisGlobalResourcesInterface::instance())), m_resourceProvider);
 
     if (gradient) {
         ui.cmbGradient->setGradient(gradient);
@@ -1109,6 +1127,7 @@ void GradientOverlay::setGradientOverlay(const psd_layer_effects_gradient_overla
     ui.chkAlignWithLayer->setCheckable(config->alignWithLayer());
     ui.angleSelector->setValue(config->angle());
     ui.intScale->setValue(config->scale());
+    ui.chkDither->setChecked(config->dither());
 }
 
 void GradientOverlay::fetchGradientOverlay(psd_layer_effects_gradient_overlay *config) const
@@ -1121,6 +1140,7 @@ void GradientOverlay::fetchGradientOverlay(psd_layer_effects_gradient_overlay *c
     config->setAlignWithLayer(ui.chkAlignWithLayer->isChecked());
     config->setAngle(ui.angleSelector->value());
     config->setScale(ui.intScale->value());
+    config->setDither(ui.chkDither->isChecked());
 }
 
 
@@ -1195,7 +1215,7 @@ void InnerGlow::setConfig(const psd_layer_effects_glow_common *config)
     ui.bnColor->setColor(color);
     ui.radioGradient->setChecked(config->fillType() == psd_fill_gradient);
 
-    KoAbstractGradientSP gradient = fetchGradientLazy(GradientPointerConverter::styleToResource(config->gradient()), m_resourceProvider);
+    KoAbstractGradientSP gradient = fetchGradientLazy(GradientPointerConverter::styleToResource(config->gradient(KisGlobalResourcesInterface::instance())), m_resourceProvider);
 
     if (gradient) {
         ui.cmbGradient->setGradient(gradient);
@@ -1284,7 +1304,8 @@ void PatternOverlay::setPatternOverlay(const psd_layer_effects_pattern_overlay *
 {
     ui.cmbCompositeOp->selectCompositeOp(KoID(pattern->blendMode()));
     ui.intOpacity->setValue(pattern->opacity());
-    ui.patternChooser->setCurrentPattern(pattern->pattern());
+    KoPatternSP patternResource = pattern->pattern(KisGlobalResourcesInterface::instance());
+    ui.patternChooser->setCurrentPattern(patternResource);
     ui.chkLinkWithLayer->setChecked(pattern->alignWithLayer());
     ui.intScale->setValue(pattern->scale());
 }
@@ -1434,7 +1455,7 @@ void Stroke::setStroke(const psd_layer_effects_stroke *stroke)
     color.fromQColor(stroke->color());
     ui.bnColor->setColor(color);
 
-    KoAbstractGradientSP gradient = fetchGradientLazy(GradientPointerConverter::styleToResource(stroke->gradient()), m_resourceProvider);
+    KoAbstractGradientSP gradient = fetchGradientLazy(GradientPointerConverter::styleToResource(stroke->gradient(KisGlobalResourcesInterface::instance())), m_resourceProvider);
 
     if (gradient) {
         ui.cmbGradient->setGradient(gradient);
@@ -1446,7 +1467,7 @@ void Stroke::setStroke(const psd_layer_effects_stroke *stroke)
     ui.angleSelector->setValue(stroke->angle());
     ui.intScale->setValue(stroke->scale());
 
-    ui.patternChooser->setCurrentPattern(stroke->pattern());
+    ui.patternChooser->setCurrentPattern(stroke->pattern(KisGlobalResourcesInterface::instance()));
     ui.chkLinkWithLayer->setChecked(stroke->alignWithLayer());
     ui.intScale_2->setValue(stroke->scale());
 }

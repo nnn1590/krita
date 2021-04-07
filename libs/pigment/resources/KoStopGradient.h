@@ -134,6 +134,8 @@ public:
      */
     static KoStopGradient fromXML(const QDomElement& elt);
 
+    QString saveSvgGradient() const;
+
 protected:
 
     QList<KoGradientStop> m_stops;
@@ -145,8 +147,7 @@ protected:
 private:
 
     void loadSvgGradient(QIODevice *file);
-    void parseSvgGradient(const QDomElement& element);
-    void parseSvgColor(QColor &color, const QString &s);
+    void parseSvgGradient(const QDomElement& element, QHash<QString, const KoColorProfile*> profiles);
 };
 
 typedef QSharedPointer<KoStopGradient> KoStopGradientSP;

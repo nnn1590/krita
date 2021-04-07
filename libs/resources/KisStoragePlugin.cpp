@@ -7,6 +7,9 @@
 #include "KisStoragePlugin.h"
 #include <QFileInfo>
 
+#include <KisMimeDatabase.h>
+#include "KisResourceLoaderRegistry.h"
+
 class KisStoragePlugin::Private
 {
 public:
@@ -26,6 +29,46 @@ KisStoragePlugin::KisStoragePlugin(const QString &location)
 
 KisStoragePlugin::~KisStoragePlugin()
 {
+}
+
+KoResourceSP KisStoragePlugin::resource(const QString &url)
+{
+    if (!url.contains('/')) return nullptr;
+
+    QStringList parts = url.split('/', QString::SkipEmptyParts);
+    if (parts.isEmpty()) return nullptr;
+
+    const QString resourceType = parts[0];
+    parts.removeFirst();
+    const QString resourceFilename = parts.join('/');
+
+    const QString mime = KisMimeDatabase::mimeTypeForSuffix(resourceFilename);
+
+    KisResourceLoaderBase *loader = KisResourceLoaderRegistry::instance()->loader(resourceType, mime);
+    if (!loader) {
+        qWarning() << "Could not create loader for" << resourceType << resourceFilename << mime;
+        return nullptr;
+    }
+
+    KoResourceSP resource = loader->create(resourceFilename);
+    return loadVersionedResource(resource) ? resource : nullptr;
+}
+
+QByteArray KisStoragePlugin::resourceMd5(const QString &url)
+{
+    // a fallback implementation for the storages with
+    // ephemeral resources
+    KoResourceSP res = resource(url);
+    if (res) {
+        return res->md5();
+    } else {
+        return QByteArray();
+    }
+}
+
+bool KisStoragePlugin::supportsVersioning() const
+{
+    return true;
 }
 
 QDateTime KisStoragePlugin::timestamp()

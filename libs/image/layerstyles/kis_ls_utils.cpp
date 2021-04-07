@@ -1,5 +1,6 @@
 /*
  *  SPDX-FileCopyrightText: 2015 Dmitry Kazakov <dimula73@gmail.com>
+ *  SPDX-FileCopyrightText: 2021 L. E. Segovia <amy@amyspark.me>
  *
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -406,6 +407,7 @@ namespace KisLsUtils
     void fillOverlayDevice(KisPaintDeviceSP fillDevice,
                            const QRect &applyRect,
                            const psd_layer_effects_overlay_base *config,
+                           KisResourcesInterfaceSP resourcesInterface,
                            KisLayerStyleFilterEnvironment *env)
     {
         if (config->fillType() == psd_fill_solid_color) {
@@ -414,7 +416,7 @@ namespace KisLsUtils
 
         } else if (config->fillType() == psd_fill_pattern) {
             fillPattern(fillDevice, applyRect, env,
-                        config->scale(), config->pattern(),
+                        config->scale(), config->pattern(resourcesInterface),
                         config->horizontalPhase(),
                         config->verticalPhase(),
                         config->alignWithLayer());
@@ -469,7 +471,7 @@ namespace KisLsUtils
             /* end of copy paste from libpsd */
 
             KisGradientPainter gc(fillDevice);
-            gc.setGradient(config->gradient());
+            gc.setGradient(config->gradient(resourcesInterface));
             QPointF gradStart;
             QPointF gradEnd;
             KisGradientPainter::enumGradientRepeat repeat =
@@ -522,7 +524,8 @@ namespace KisLsUtils
             gc.paintGradient(gradStart, gradEnd,
                              repeat, 0.0,
                              config->reverse(),
-                             applyRect);
+                             applyRect,
+                             config->dither());
         }
     }
 
@@ -534,6 +537,7 @@ namespace KisLsUtils
                              const QRect &dstRect,
                              const psd_layer_effects_context */*context*/,
                              const psd_layer_effects_shadow_base *config,
+                             KisResourcesInterfaceSP resourcesInterface,
                              const KisLayerStyleFilterEnvironment *env)
     {
         const KoColor effectColor(config->color(), srcDevice->colorSpace());
@@ -551,13 +555,13 @@ namespace KisLsUtils
             gc.end();
 
         } else if (config->fillType() == psd_fill_gradient) {
-            if (!config->gradient()) {
+            if (!config->gradient(resourcesInterface)) {
                 warnKrita << "KisLsUtils::applyFinalSelection: Gradient object is null! Skipping...";
                 return;
             }
 
             QVector<KoColor> table(256);
-            Private::getGradientTable(config->gradient().data(), &table, dstDevice->colorSpace());
+            Private::getGradientTable(config->gradient(resourcesInterface).data(), &table, dstDevice->colorSpace());
 
             Private::applyGradient(dstDevice, baseSelection->pixelSelection(),
                                    effectRect, table,

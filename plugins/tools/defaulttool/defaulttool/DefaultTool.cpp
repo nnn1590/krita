@@ -138,7 +138,7 @@ public:
         tool()->canvas()->updateCanvas(selectedRectangle() | tool()->decorationsRect());
     }
 
-    void finishInteraction(Qt::KeyboardModifiers modifiers = 0) override
+    void finishInteraction(Qt::KeyboardModifiers modifiers = QFlags<Qt::KeyboardModifier>()) override
     {
         Q_UNUSED(modifiers);
         DefaultTool *defaultTool = dynamic_cast<DefaultTool*>(tool());
@@ -1144,9 +1144,9 @@ void DefaultTool::recalcSelectionBox(KoSelection *selection)
     }
 }
 
-void DefaultTool::activate(ToolActivation activation, const QSet<KoShape *> &shapes)
+void DefaultTool::activate(const QSet<KoShape *> &shapes)
 {
-    KoToolBase::activate(activation, shapes);
+    KoToolBase::activate(shapes);
 
     QAction *actionBringToFront = action("object_order_front");
     connect(actionBringToFront, SIGNAL(triggered()), this, SLOT(selectionBringToFront()), Qt::UniqueConnection);
@@ -1893,5 +1893,5 @@ void DefaultTool::addTransformActions(QMenu *menu) const {
 void DefaultTool::explicitUserStrokeEndRequest()
 {
     QList<KoShape *> shapes = koSelection()->selectedEditableShapesAndDelegates();
-    emit activateTemporary(KoToolManager::instance()->preferredToolForSelection(shapes));
+    KoToolManager::instance()->switchToolRequested(KoToolManager::instance()->preferredToolForSelection(shapes));
 }

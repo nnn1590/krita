@@ -13,12 +13,12 @@
 #include <klocalizedstring.h>
 
 QList<KisMimeDatabase::KisMimeType> KisMimeDatabase::s_mimeDatabase;
-
+#ifdef Q_OS_ANDROID
 static QString sanitizeSuffix(const QString &suffix)
 {
     return suffix.split(QLatin1Char(' ')).first();
 }
-
+#endif
 QString KisMimeDatabase::mimeTypeForFile(const QString &file, bool checkExistingFiles)
 {
     fillMimeData();
@@ -314,7 +314,12 @@ void KisMimeDatabase::fillMimeData()
         mimeType.description = i18nc("description of a file type", "HEIC/HEIF Image");
         mimeType.suffixes = QStringList() << "heic" << "heif";
         s_mimeDatabase << mimeType;
-        
+
+        mimeType.mimeType = "image/avif";
+        mimeType.description = i18nc("description of a file type", "AVIF Image");
+        mimeType.suffixes = QStringList() << "avif";
+        s_mimeDatabase << mimeType;
+
         mimeType.mimeType = "image/jp2";
         mimeType.description = i18nc("description of a file type", "JP2 Image");
         mimeType.suffixes = QStringList() << "jp2" << "j2k";
@@ -323,6 +328,16 @@ void KisMimeDatabase::fillMimeData()
         mimeType.mimeType = "application/x-krita-seexpr-script";
         mimeType.description = i18nc("description of a file type", "SeExpr script package");
         mimeType.suffixes = QStringList() << "kse";
+        s_mimeDatabase << mimeType;
+
+        mimeType.mimeType = "application/x-krita-archive";
+        mimeType.description = i18nc("description of a file type", "Krita Archival Image Format");
+        mimeType.suffixes = QStringList() << "krz";
+        s_mimeDatabase << mimeType;
+
+        mimeType.mimeType = "image/apng";
+        mimeType.description = i18nc("description of a file type", "Animated PNG Image");
+        mimeType.suffixes = QStringList() << "apng";
         s_mimeDatabase << mimeType;
 
         debugPlugin << "Filled mimedatabase with" << s_mimeDatabase.count() << "special mimetypes";

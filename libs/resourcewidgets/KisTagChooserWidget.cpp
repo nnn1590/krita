@@ -56,6 +56,7 @@ KisTagChooserWidget::KisTagChooserWidget(KisTagModel *model, QWidget* parent)
     comboLayout->addWidget(d->comboBox, 0, 0);
 
     d->tagToolButton = new KisTagToolButton(this);
+    d->tagToolButton->setToolTip(i18n("Tag options"));
     comboLayout->addWidget(d->tagToolButton, 0, 1);
 
     comboLayout->setSpacing(0);
@@ -149,7 +150,7 @@ void KisTagChooserWidget::setCurrentItem(const QString &tag)
 {
     for (int i = 0; i < d->model->rowCount(); i++) {
         QModelIndex index = d->model->index(i, 0);
-        QString currentRowTag = d->model->data(index, Qt::UserRole + KisAllTagsModel::Name).toString();
+        QString currentRowTag = d->model->data(index, Qt::UserRole + KisAllTagsModel::Url).toString();
         if (currentRowTag == tag) {
             setCurrentIndex(i);
         }
@@ -165,14 +166,12 @@ void KisTagChooserWidget::addTag(const QString &tagName, KoResourceSP resource)
 {
     d->model->addTag(tagName, {resource});
     d->model->sort(KisAllTagsModel::Name);
-    setCurrentItem(tagName);
 }
 
 void KisTagChooserWidget::addTag(KisTagSP tag, KoResourceSP resource)
 {
     d->model->addTag(tag, {resource});
     d->model->sort(KisAllTagsModel::Name);
-    setCurrentItem(tag->name());
 }
 
 KisTagSP KisTagChooserWidget::currentlySelectedTag()
@@ -185,6 +184,11 @@ KisTagSP KisTagChooserWidget::currentlySelectedTag()
     QModelIndex index = d->model->index(row, 0);
     KisTagSP tag =  d->model->tagForIndex(index);
     return tag;
+}
+
+void KisTagChooserWidget::updateIcons()
+{
+    d->tagToolButton->loadIcon();
 }
 
 void KisTagChooserWidget::tagToolContextMenuAboutToShow()

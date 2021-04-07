@@ -34,11 +34,11 @@ KisPaletteChooser::KisPaletteChooser(QWidget *parent)
 
     m_d->actAdd.reset(new QAction(KisIconUtils::loadIcon("list-add"),
                                   i18n("Add a new palette")));
-    m_d->actRemove.reset(new QAction(KisIconUtils::loadIcon("list-remove"),
+    m_d->actRemove.reset(new QAction(KisIconUtils::loadIcon("edit-delete"),
                                      i18n("Remove current palette")));
-    m_d->actImport.reset(new QAction(KisIconUtils::loadIcon("document-import"),
+    m_d->actImport.reset(new QAction(KisIconUtils::loadIcon("document-import-16"),
                                      i18n("Import a new palette from file")));
-    m_d->actExport.reset(new QAction(KisIconUtils::loadIcon("document-export"),
+    m_d->actExport.reset(new QAction(KisIconUtils::loadIcon("document-export-16"),
                                      i18n("Export current palette to file")));
     m_ui->setupUi(this);
     m_ui->bnAdd->setDefaultAction(m_d->actAdd.data());
@@ -47,9 +47,13 @@ KisPaletteChooser::KisPaletteChooser(QWidget *parent)
     m_ui->bnExport->setDefaultAction(m_d->actExport.data());
 
     m_ui->bnAdd->setEnabled(false);
+    m_ui->bnAdd->setAutoRaise(true);
     m_ui->bnRemove->setEnabled(false);
+    m_ui->bnRemove->setAutoRaise(true);
     m_ui->bnImport->setEnabled(false);
+    m_ui->bnImport->setAutoRaise(true);
     m_ui->bnExport->setEnabled(false);
+    m_ui->bnExport->setAutoRaise(true);
 
     connect(m_d->actAdd.data(), SIGNAL(triggered()), SLOT(slotAdd()));
     connect(m_d->actRemove.data(), SIGNAL(triggered()), SLOT(slotRemove()));
@@ -63,6 +67,8 @@ KisPaletteChooser::KisPaletteChooser(QWidget *parent)
     m_d->itemChooser->showTaggingBar(true);
     QHBoxLayout *paletteLayout = new QHBoxLayout(m_ui->viewPalette);
     paletteLayout->addWidget(m_d->itemChooser.data());
+
+    m_d->itemChooser->setCurrentItem(0);
 
     connect(m_d->itemChooser.data(), SIGNAL(resourceSelected(KoResourceSP )), SLOT(slotPaletteResourceSelected(KoResourceSP )));
 }
@@ -108,8 +114,11 @@ void KisPaletteChooser::slotImport()
 
 void KisPaletteChooser::slotExport()
 {
-    if (!m_d->allowModification) { return; }
-    emit sigExportPalette(m_d->itemChooser->currentResource().staticCast<KoColorSet>());
+    if (!m_d->itemChooser->currentResource()) {
+        m_d->itemChooser->setCurrentItem(0);
+    }
+    KoColorSetSP palette = m_d->itemChooser->currentResource().dynamicCast<KoColorSet>();
+    emit sigExportPalette(palette);
 }
 
 void KisPaletteChooser::setAllowModification(bool allowModification)

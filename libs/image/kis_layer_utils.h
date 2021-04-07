@@ -13,6 +13,7 @@
 #include "kis_types.h"
 #include "kritaimage_export.h"
 #include "kis_command_utils.h"
+#include "kis_time_span.h"
 
 class KoProperties;
 class KoColor;
@@ -67,14 +68,20 @@ namespace KisLayerUtils
 
     KRITAIMAGE_EXPORT void changeImageDefaultProjectionColor(KisImageSP image, const KoColor &color);
 
+    KRITAIMAGE_EXPORT KisNodeSP  findRoot(KisNodeSP node);
+
     KRITAIMAGE_EXPORT bool canChangeImageProfileInvisibly(KisImageSP image);
+
+    KRITAIMAGE_EXPORT void splitAlphaToMask(KisImageSP image, KisNodeSP node, const QString& maskName);
+
+    KRITAIMAGE_EXPORT void convertToPaintLayer(KisImageSP image, KisNodeSP src);
 
     typedef QMap<int, QSet<KisNodeSP> > FrameJobs;
     void updateFrameJobs(FrameJobs *jobs, KisNodeSP node);
     void updateFrameJobsRecursive(FrameJobs *jobs, KisNodeSP rootNode);
 
-    struct SwitchFrameCommand : public KisCommandUtils::FlipFlopCommand {
-        struct SharedStorage {
+    struct KRITAIMAGE_EXPORT SwitchFrameCommand : public KisCommandUtils::FlipFlopCommand {
+        struct KRITAIMAGE_EXPORT SharedStorage {
             /**
              * For some reason the absence of a destructor in the SharedStorage
              * makes Krita crash on exit. Seems like some compiler weirdness... (DK)
@@ -157,7 +164,6 @@ namespace KisLayerUtils
         KisNodeSP m_activeNode;
     };
 
-
     class KRITAIMAGE_EXPORT KisSimpleUpdateCommand : public KisCommandUtils::FlipFlopCommand
     {
     public:
@@ -208,14 +214,14 @@ namespace KisLayerUtils
      * considered to be found, the search is stopped and the found
      * node is returned to the caller.
      */
-    KisNodeSP KRITAIMAGE_EXPORT recursiveFindNode(KisNodeSP node, std::function<bool(KisNodeSP)> func);
+    KRITAIMAGE_EXPORT KisNodeSP recursiveFindNode(KisNodeSP node, std::function<bool(KisNodeSP)> func);
 
     /**
      * Recursively searches for a node with specified Uuid
      */
-    KisNodeSP KRITAIMAGE_EXPORT findNodeByUuid(KisNodeSP root, const QUuid &uuid);
+    KRITAIMAGE_EXPORT KisNodeSP findNodeByUuid(KisNodeSP root, const QUuid &uuid);
 
-    KisImageSP KRITAIMAGE_EXPORT findImageByHierarchy(KisNodeSP node);
+    KRITAIMAGE_EXPORT KisImageSP findImageByHierarchy(KisNodeSP node);
 
     template <class T>
     T* findNodeByType(KisNodeSP root) {
@@ -224,8 +230,16 @@ namespace KisLayerUtils
         }).data());
     }
 
+    // Methods used by filter manager, filter stroke strategy to get times associated with frameIDs.
+    // Important for avoiding instanced frame data being processed twice!
+    KRITAIMAGE_EXPORT int fetchLayerActiveRasterFrameTime(KisNodeSP node);
+    KRITAIMAGE_EXPORT KisTimeSpan fetchLayerActiveRasterFrameSpan(KisNodeSP node, const int time);
+    KRITAIMAGE_EXPORT QSet<int> fetchLayerIdenticalRasterFrameTimes(KisNodeSP node, const int& frameTime);
 
-    KisNodeSP KRITAIMAGE_EXPORT findRoot(KisNodeSP node);
+    KRITAIMAGE_EXPORT QSet<int> filterTimesForOnlyRasterKeyedTimes(KisNodeSP node, const QSet<int> &times);
+
+    /* Returns a set of times associated with every unique frame from a selection. */
+    KRITAIMAGE_EXPORT QSet<int> fetchUniqueFrameTimes(KisNodeSP node, QSet<int> selectedTimes);
 }
 
 #endif /* __KIS_LAYER_UTILS_H */

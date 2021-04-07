@@ -120,20 +120,14 @@ struct KisRasterKeyframeChannel::Private
     bool onionSkinsEnabled;
 };
 
-KisRasterKeyframeChannel::KisRasterKeyframeChannel(const KoID &id, const KisPaintDeviceWSP paintDevice, KisNodeWSP parent)
-    : KisKeyframeChannel(id, parent),
-      m_d(new Private(paintDevice, QString()))
-{
-}
-
 KisRasterKeyframeChannel::KisRasterKeyframeChannel(const KoID &id, const KisPaintDeviceWSP paintDevice, const KisDefaultBoundsBaseSP bounds)
     : KisKeyframeChannel(id, bounds),
       m_d(new Private(paintDevice, QString()))
 {
 }
 
-KisRasterKeyframeChannel::KisRasterKeyframeChannel(const KisRasterKeyframeChannel &rhs, KisNodeWSP newParent, const KisPaintDeviceWSP newPaintDevice)
-    : KisKeyframeChannel(rhs, newParent),
+KisRasterKeyframeChannel::KisRasterKeyframeChannel(const KisRasterKeyframeChannel &rhs, const KisPaintDeviceWSP newPaintDevice)
+    : KisKeyframeChannel(rhs),
       m_d(new Private(newPaintDevice, rhs.m_d->filenameSuffix))
 {
     KIS_ASSERT_RECOVER_NOOP(&rhs != this);
@@ -300,6 +294,20 @@ QSet<int> KisRasterKeyframeChannel::clonesOf(int time)
     QSet<int> clones = QSet<int>::fromList(values);
 #endif
     clones.remove(time); // Clones only! Remove input time from the list.
+    return clones;
+}
+
+QSet<int> KisRasterKeyframeChannel::timesForFrameID(int frameID) const
+{
+    QSet<int> clones;
+    if (m_d->frameIDTimesMap.contains(frameID)) {
+        QList<int> values = m_d->frameIDTimesMap.values(frameID);
+        #if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
+        clones = QSet<int>(values.cbegin(), values.cend());
+        #else
+        clones = QSet<int>::fromList(values);
+        #endif
+    }
     return clones;
 }
 

@@ -6,7 +6,7 @@
 
 #include "freehand_stroke_test.h"
 
-#include <QTest>
+#include <simpletest.h>
 #include <KoCompositeOpRegistry.h>
 #include <KoColor.h>
 #include "stroke_testing_utils.h"
@@ -46,7 +46,7 @@ protected:
         Q_UNUSED(activeNode);
 
         if (m_useLod) {
-            image->setDesiredLevelOfDetail(1);
+            image->setLodPreferences(KisLodPreferences(1));
         }
     }
 

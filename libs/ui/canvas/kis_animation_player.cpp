@@ -178,6 +178,19 @@ KisAnimationPlayer::KisAnimationPlayer(KisCanvas2 *canvas)
     connect(m_d->canvas->image()->animationInterface(), SIGNAL(sigAudioChannelChanged()), SLOT(slotAudioChannelChanged()));
     connect(m_d->canvas->image()->animationInterface(), SIGNAL(sigAudioVolumeChanged()), SLOT(slotAudioVolumeChanged()));
 
+    // Grow to new playback range when new frames added (configurable)...
+    connect(m_d->canvas->image()->animationInterface(), &KisImageAnimationInterface::sigKeyframeAdded, [this](const KisKeyframeChannel*, int time){
+        if (m_d->canvas && m_d->canvas->image()) {
+            KisImageAnimationInterface* animInterface = m_d->canvas->image()->animationInterface();
+            KisConfig cfg(true);
+            if (animInterface && cfg.adaptivePlaybackRange()) {
+                KisTimeSpan desiredPlaybackRange = animInterface->fullClipRange();
+                desiredPlaybackRange.include(time);
+                animInterface->setFullClipRange(desiredPlaybackRange);
+            }
+        }
+    });
+
     slotAudioChannelChanged();
 }
 
@@ -308,7 +321,7 @@ void KisAnimationPlayer::slotUpdateAudioChunkLength()
 
 void KisAnimationPlayer::slotUpdatePlaybackTimer()
 {
-     m_d->timer->stop();
+    m_d->timer->stop();
 
     const KisImageAnimationInterface *animation = m_d->canvas->image()->animationInterface();
     const KisTimeSpan &playBackRange = animation->playbackRange();
@@ -345,10 +358,10 @@ void KisAnimationPlayer::slotUpdatePlaybackTimer()
 
 void KisAnimationPlayer::play()
 {
-    const KisImageAnimationInterface *animation = m_d->canvas->image()->animationInterface();
+    const KisImageAnimationInterface *animInterface = m_d->canvas->image()->animationInterface();
 
     {
-        const KisTimeSpan &range = animation->playbackRange();
+        const KisTimeSpan &range = animInterface->playbackRange();
         if (!range.isValid()) return;
 
         // when openGL is disabled, there is no animation cache
@@ -401,7 +414,7 @@ void KisAnimationPlayer::play()
     }
 
     if (m_d->playbackState == STOPPED) {
-        m_d->playbackOriginFrame = animation->currentUITime();
+        m_d->playbackOriginFrame = animInterface->currentUITime();
         m_d->currentFrame = m_d->playbackOriginFrame;
     }
 
@@ -554,7 +567,6 @@ void KisAnimationPlayer::previousKeyframe()
 void KisAnimationPlayer::nextKeyframe()
 {
     if (!m_d->canvas) return;
-
     KisNodeSP node = m_d->canvas->viewManager()->activeNode();
     if (!node) return;
 
@@ -571,7 +583,17 @@ void KisAnimationPlayer::nextKeyframe()
     }
 
     if (keyframes->keyframeAt(destinationTime)) {
+        // Jump to next key...
         animation->requestTimeSwitchWithUndo(destinationTime);
+    } else {
+        // Jump ahead by estimated timing...
+        const int activeKeyTime = keyframes->activeKeyframeTime(currentTime);
+        const int previousKeyTime = keyframes->previousKeyframeTime(activeKeyTime);
+
+        if (previousKeyTime != -1) {
+            const int timing = activeKeyTime - previousKeyTime;
+            animation->requestTimeSwitchWithUndo(currentTime + timing);
+        }
     }
 }
 

@@ -6,7 +6,7 @@
 
 #include "kis_warp_transform_worker_test.h"
 
-#include <QTest>
+#include <simpletest.h>
 #include <testutil.h>
 
 #include "kis_warptransform_worker.h"
@@ -62,15 +62,16 @@ struct WarpTransforWorkerData {
 void KisWarpTransformWorkerTest::test()
 {
     WarpTransforWorkerData d;
+    KisPaintDeviceSP srcDev = new KisPaintDevice(*d.dev);
+
     KisWarpTransformWorker worker(KisWarpTransformWorker::RIGID_TRANSFORM,
-                                  d.dev,
                                   d.origPoints,
                                   d.transfPoints,
                                   d.alpha,
                                   d.updater);
 
     QBENCHMARK_ONCE {
-        worker.run();
+        worker.run(srcDev, d.dev);
     }
 
     QImage result = d.dev->convertToQImage(0);
@@ -326,7 +327,6 @@ void KisWarpTransformWorkerTest::testNeedChangeRects()
 {
     WarpTransforWorkerData d;
     KisWarpTransformWorker worker(KisWarpTransformWorker::RIGID_TRANSFORM,
-                                  d.dev,
                                   d.origPoints,
                                   d.transfPoints,
                                   d.alpha,
@@ -337,4 +337,4 @@ void KisWarpTransformWorkerTest::testNeedChangeRects()
 }
 
 
-QTEST_MAIN(KisWarpTransformWorkerTest)
+SIMPLE_TEST_MAIN(KisWarpTransformWorkerTest)

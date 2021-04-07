@@ -30,7 +30,7 @@
 #include "KisResourceLoaderRegistry.h"
 #include <KisResourceModelProvider.h>
 #include <KisResourceModel.h>
-
+#include <KoMD5Generator.h>
 
 #include <KritaVersionWrapper.h>
 
@@ -183,7 +183,6 @@ bool KoResourceBundle::save()
         Q_FOREACH (const KoResourceBundleManifest::ResourceReference &ref, m_manifest.files(resType)) {
             KoResourceSP res = model.resourceForMD5(ref.md5sum);
             if (!res) res = model.resourceForFilename(QFileInfo(ref.resourcePath).fileName());
-            qDebug() << "res  is or isn't found: " << (res.isNull() ? "(null)" : res->name());
             if (!saveResourceToStore(res, store.data(), resType)) {
                 if (res) {
                     qWarning() << "Could not save resource" << resType << res->name();
@@ -273,8 +272,10 @@ void KoResourceBundle::setThumbnail(QString filename)
 void KoResourceBundle::writeMeta(const QString &metaTag, KoXmlWriter *writer)
 {
     if (m_metadata.contains(metaTag)) {
-        writer->startElement(metaTag.toUtf8());
-        writer->addTextNode(m_metadata[metaTag].toUtf8());
+        QByteArray mt = metaTag.toUtf8();
+        QByteArray tx = m_metadata[metaTag].toUtf8();
+        writer->startElement(mt);
+        writer->addTextNode(tx);
         writer->endElement();
     }
 }
@@ -292,13 +293,13 @@ void KoResourceBundle::writeUserDefinedMeta(const QString &metaTag, KoXmlWriter 
 bool KoResourceBundle::readMetaData(KoStore *resourceStore)
 {
     if (resourceStore->open("meta.xml")) {
-        KoXmlDocument doc;
+        QDomDocument doc;
         if (!doc.setContent(resourceStore->device())) {
             qWarning() << "Could not parse meta.xml for" << m_filename;
             return false;
         }
         // First find the manifest:manifest node.
-        KoXmlNode n = doc.firstChild();
+        QDomNode n = doc.firstChild();
         for (; !n.isNull(); n = n.nextSibling()) {
             if (!n.isElement()) {
                 continue;
@@ -313,10 +314,10 @@ bool KoResourceBundle::readMetaData(KoStore *resourceStore)
             return false;
         }
 
-        const KoXmlElement  metaElement = n.toElement();
+        const QDomElement  metaElement = n.toElement();
         for (n = metaElement.firstChild(); !n.isNull(); n = n.nextSibling()) {
             if (n.isElement()) {
-                KoXmlElement e = n.toElement();
+                QDomElement e = n.toElement();
                 if (e.tagName() == "meta:meta-userdefined") {
                     if (e.attribute("meta:name") == "tag") {
                         m_bundletags << e.attribute("meta:value");
@@ -349,8 +350,10 @@ void KoResourceBundle::saveMetadata(QScopedPointer<KoStore> &store)
 
     writeMeta(KisResourceStorage::s_meta_generator, &metaWriter);
 
-    metaWriter.startElement(KisResourceStorage::s_meta_version.toUtf8());
-    metaWriter.addTextNode(m_bundleVersion.toUtf8());
+    QByteArray ba1 = KisResourceStorage::s_meta_version.toUtf8();
+    metaWriter.startElement(ba1);
+    QByteArray ba2  = m_bundleVersion.toUtf8();
+    metaWriter.addTextNode(ba2);
     metaWriter.endElement();
 
     writeMeta(KisResourceStorage::s_meta_author, &metaWriter);
@@ -360,13 +363,23 @@ void KoResourceBundle::saveMetadata(QScopedPointer<KoStore> &store)
     writeMeta(KisResourceStorage::s_meta_creator, &metaWriter);
     writeMeta(KisResourceStorage::s_meta_creation_date, &metaWriter);
     writeMeta(KisResourceStorage::s_meta_dc_date, &metaWriter);
+    writeMeta(KisResourceStorage::s_meta_email, &metaWriter);
+    writeMeta(KisResourceStorage::s_meta_license, &metaWriter);
+    writeMeta(KisResourceStorage::s_meta_website, &metaWriter);
+
+    // For compatibility
     writeUserDefinedMeta("email", &metaWriter);
     writeUserDefinedMeta("license", &metaWriter);
     writeUserDefinedMeta("website", &metaWriter);
+
+
     Q_FOREACH (const QString &tag, m_bundletags) {
-        metaWriter.startElement(KisResourceStorage::s_meta_user_defined.toUtf8());
-        metaWriter.addAttribute(KisResourceStorage::s_meta_name.toUtf8(), "tag");
-        metaWriter.addAttribute(KisResourceStorage::s_meta_value.toUtf8(), tag);
+        QByteArray ba1 = KisResourceStorage::s_meta_user_defined.toUtf8();
+        QByteArray ba2 = KisResourceStorage::s_meta_name.toUtf8();
+        QByteArray ba3 = KisResourceStorage::s_meta_value.toUtf8();
+        metaWriter.startElement(ba1);
+        metaWriter.addAttribute(ba2, "tag");
+        metaWriter.addAttribute(ba3, tag);
         metaWriter.endElement();
     }
 
@@ -401,36 +414,82 @@ KoResourceBundleManifest &KoResourceBundle::manifest()
 
 KoResourceSP KoResourceBundle::resource(const QString &resourceType, const QString &filepath)
 {
-    if (m_filename.isEmpty()) return 0;
-
-
-    QScopedPointer<KoStore> resourceStore(KoStore::createStore(m_filename, KoStore::Read, "application/x-krita-resourcebundle", KoStore::Zip));
-
-    if (!resourceStore || resourceStore->bad()) {
-        qWarning() << "Could not open store on bundle" << m_filename;
-        return 0;
-    }
-
-    if (!resourceStore->open(filepath)) {
-        qWarning() << "Could not open file in bundle" << filepath;
-        return 0;
-    }
-
     QString mime = KisMimeDatabase::mimeTypeForSuffix(filepath);
     KisResourceLoaderBase *loader = KisResourceLoaderRegistry::instance()->loader(resourceType, mime);
     if (!loader) {
         qWarning() << "Could not create loader for" << resourceType << filepath << mime;
         return 0;
     }
-    KoResourceSP res = loader->load(filepath, *resourceStore->device(), KisGlobalResourcesInterface::instance());
-    QString filename = QFileInfo(filepath).fileName();
-    if (!res.isNull()) {
-        // Note that res will be null for Special_dyna_dots.kpp which is a brush preset based on a deleted engine
-        res->setFilename(filename);
+
+    QStringList parts = filepath.split('/', QString::SkipEmptyParts);
+    Q_ASSERT(parts.size() == 2);
+
+    KoResourceSP resource = loader->create(parts[1]);
+    return loadResource(resource) ? resource : 0;
+}
+
+bool KoResourceBundle::loadResource(KoResourceSP resource)
+{
+    if (m_filename.isEmpty()) return false;
+
+    const QString resourceType = resource->resourceType().first;
+
+    QScopedPointer<KoStore> resourceStore(KoStore::createStore(m_filename, KoStore::Read, "application/x-krita-resourcebundle", KoStore::Zip));
+
+    if (!resourceStore || resourceStore->bad()) {
+        qWarning() << "Could not open store on bundle" << m_filename;
+        return false;
     }
+    const QString fileName = QString("%1/%2").arg(resourceType).arg(resource->filename());
+
+    if (!resourceStore->open(fileName)) {
+        qWarning() << "Could not open file in bundle" << fileName;
+        return false;
+    }
+
+    if (!resource->loadFromDevice(resourceStore->device(),
+                                  KisGlobalResourcesInterface::instance())) {
+        qWarning() << "Could not reload the resource from the bundle" << resourceType << fileName << m_filename;
+        return false;
+    }
+
+    if ((resource->image().isNull() || resource->thumbnail().isNull()) && !resource->thumbnailPath().isNull()) {
+
+        if (!resourceStore->open(resourceType + '/' + resource->thumbnailPath())) {
+            qWarning() << "Could not open thumbnail in bundle" << resource->thumbnailPath();
+            return false;
+        }
+
+        QImage img;
+        img.load(resourceStore->device(), QFileInfo(resource->thumbnailPath()).completeSuffix().toLatin1());
+        resource->setImage(img);
+        resource->updateThumbnail();
+    }
+
+    return true;
+}
+
+QByteArray KoResourceBundle::resourceMd5(const QString &url)
+{
+    QByteArray result;
+
+    if (m_filename.isEmpty()) return result;
+
+    QScopedPointer<KoStore> resourceStore(KoStore::createStore(m_filename, KoStore::Read, "application/x-krita-resourcebundle", KoStore::Zip));
+
+    if (!resourceStore || resourceStore->bad()) {
+        qWarning() << "Could not open store on bundle" << m_filename;
+        return result;
+    }
+    if (!resourceStore->open(url)) {
+        qWarning() << "Could not open file in bundle" << url;
+        return result;
+    }
+
+    result = KoMD5Generator::generateHash(resourceStore->device()->readAll());
     resourceStore->close();
 
-    return res;
+    return result;
 }
 
 QImage KoResourceBundle::image() const

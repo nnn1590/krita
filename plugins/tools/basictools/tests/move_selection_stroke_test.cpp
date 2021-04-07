@@ -6,7 +6,7 @@
 
 #include "move_selection_stroke_test.h"
 
-#include <QTest>
+#include <simpletest.h>
 
 #include <KoColor.h>
 
@@ -38,7 +38,7 @@ void MoveSelectionStrokeTest::test()
     QScopedPointer<KoCanvasResourceProvider> manager(
         utils::createResourceManager(image));
 
-    image->setDesiredLevelOfDetail(2);
+    image->setLodPreferences(KisLodPreferences(2));
     image->waitForDone();
 
     KisResourcesSnapshotSP resources =
