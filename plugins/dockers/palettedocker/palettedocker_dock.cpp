@@ -83,14 +83,12 @@ PaletteDockerDock::PaletteDockerDock( )
     m_ui->bnEditPalette->setDefaultAction(m_actEditPalette.data());
     m_ui->bnSavePalette->setDefaultAction(m_actSavePalette.data());
 
-
     // to make sure their icons have the same size
     m_ui->bnRemove->setIconSize(QSize(16, 16));
     m_ui->bnRename->setIconSize(QSize(16, 16));
     m_ui->bnAdd->setIconSize(QSize(16, 16));
     m_ui->bnEditPalette->setIconSize(QSize(16, 16));
     m_ui->bnSavePalette->setIconSize(QSize(16, 16));
-
 
     m_ui->paletteView->setPaletteModel(m_model);
     m_ui->paletteView->setAllowModification(true);
@@ -115,7 +113,6 @@ PaletteDockerDock::PaletteDockerDock( )
     m_viewContextMenu.addAction(m_actRemove.data());
     connect(m_ui->paletteView, SIGNAL(pressed(QModelIndex)), SLOT(slotContextMenu(QModelIndex)));
 
-    m_paletteChooser->setAllowModification(true);
     connect(m_paletteChooser, SIGNAL(sigPaletteSelected(KoColorSetSP)), SLOT(slotSetColorSet(KoColorSetSP)));
     connect(m_paletteChooser, SIGNAL(sigAddPalette()), SLOT(slotAddPalette()));
     connect(m_paletteChooser, SIGNAL(sigImportPalette()), SLOT(slotImportPalette()));
@@ -188,15 +185,6 @@ void PaletteDockerDock::resourceChanged(QSharedPointer<KoColorSet> resource)
     m_model->sigPaletteModified();
 }
 
-void PaletteDockerDock::syncTaggedResourceView()
-{}
-
-void PaletteDockerDock::syncTagAddition(const QString& tag)
-{   Q_UNUSED(tag); }
-
-void PaletteDockerDock::syncTagRemoval(const QString& tag)
-{   Q_UNUSED(tag); }
-
 void PaletteDockerDock::slotContextMenu(const QModelIndex &)
 {
     if (QApplication::mouseButtons() == Qt::RightButton) {
@@ -216,14 +204,14 @@ void PaletteDockerDock::slotRemovePalette(KoColorSetSP cs)
 
 void PaletteDockerDock::slotImportPalette()
 {
-    m_paletteEditor->importPalette();
+    KoColorSetSP palette = m_paletteEditor->importPalette();
+    m_paletteChooser->paletteSelected(palette);
 }
 
 void PaletteDockerDock::slotExportPalette(KoColorSetSP palette)
 {
-    qDebug() << palette;
-
     KoFileDialog dialog(this, KoFileDialog::SaveFile, "Save Palette");
+    dialog.setCaption(i18n("Export Palette"));
     dialog.setDefaultDir(palette->filename());
     dialog.setMimeTypeFilters(QStringList() << "krita/x-colorset");
     QString newPath;
@@ -270,7 +258,7 @@ void PaletteDockerDock::slotSetColorSet(KoColorSetSP colorSet)
         m_paletteEditor->saveNewPaletteVersion();
     }
 
-    if (colorSet && colorSet->isEditable()) {
+    if (colorSet) {
         m_ui->bnAdd->setEnabled(true);
         m_ui->bnRename->setEnabled(true);
         m_ui->bnRemove->setEnabled(true);
@@ -420,7 +408,7 @@ void PaletteDockerDock::slotStoragesChanged(const QString &/*location*/)
         slotSetColorSet(0);
     }
     if (m_currentColorSet) {
-        if (!m_rServer->resourceByFilename(m_currentColorSet->filename())) {
+        if (!m_rServer->resourceByMD5(m_currentColorSet->md5())) {
             slotSetColorSet(0);
         }
     }
@@ -436,7 +424,6 @@ void PaletteDockerDock::slotPaletteIndexSelected(const QModelIndex &index)
             setFGColorByPalette(entry);
         }
     }
-    if (!m_currentColorSet->isEditable()) { return; }
     m_ui->bnRemove->setEnabled(occupied);
     updatePaletteName();
 }
@@ -458,9 +445,7 @@ void PaletteDockerDock::slotPaletteIndexDoubleClicked(const QModelIndex &index)
 void PaletteDockerDock::setEntryByForeground(const QModelIndex &index)
 {
     m_paletteEditor->setEntry(m_resourceProvider->fgColor(), index);
-    if (m_currentColorSet->isEditable()) {
-        m_ui->bnRemove->setEnabled(true);
-    }
+    m_ui->bnRemove->setEnabled(true);
     updatePaletteName();
 }
 
