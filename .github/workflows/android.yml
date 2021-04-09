@@ -114,6 +114,7 @@ jobs:
       run: |
         . envsetup.sh
         echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/"{*,"krita_build_apk-release-unsigned"}".apk" || true
         if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
           zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
             echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
@@ -266,6 +267,7 @@ jobs:
       run: |
         . envsetup.sh
         echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/"{*,"krita_build_apk-release-unsigned"}".apk" || true
         if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
           zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
             echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
@@ -418,6 +420,7 @@ jobs:
       run: |
         . envsetup.sh
         echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/"{*,"krita_build_apk-release-unsigned"}".apk" || true
         if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
           zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
             echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
@@ -570,6 +573,7 @@ jobs:
       run: |
         . envsetup.sh
         echo "${KRITA_BUILD_APK_SIGN_STORE_FILE}" | base64 -d > "${KRITA_BUILD_APK_SIGN_STORE_PATH}"
+        mv -v "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/"{*,"krita_build_apk-release-unsigned"}".apk" || true
         if [ -f "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" ]; then
           zipalign -c 4 "${KRITA_BUILD_WORKSPACE}/krita_build_apk/build/outputs/apk/release/krita_build_apk-release-unsigned.apk" && (
             echo -e "\e[1;34m<Info>\e[m APK is already aligned, skip alignment."
