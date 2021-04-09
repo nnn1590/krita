@@ -56,7 +56,9 @@ public:
      * hitbox regions specified to know if a click is doing any of those actions.
      */
     void beginPrimaryAction(KoPointerEvent *event) override;
-    void beginAlternateAction(KoPointerEvent *event, AlternateAction action) override;
+
+    // We will need this to allow Shift-modifier to align to axes when making new assistants
+    void beginAlternateAction(KoPointerEvent *event, KisTool::AlternateAction action) override;
 
     void continuePrimaryAction(KoPointerEvent *event) override;
     void endPrimaryAction(KoPointerEvent *event) override;
@@ -64,6 +66,7 @@ public:
     void endAlternateAction(KoPointerEvent *event, AlternateAction action) override;
     void mouseMoveEvent(KoPointerEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+
 
     QWidget *createOptionWidget() override;
 
@@ -81,12 +84,17 @@ private:
     // This uses m_handleDrag or m_newAssistant to figure out what handle to snap and where
     bool snap(KoPointerEvent *event);
 
+    void beginActionImpl(KoPointerEvent *event);
+    void continueActionImpl(KoPointerEvent *event);
+    void endActionImpl(KoPointerEvent *event);
+
 public Q_SLOTS:
     void activate(const QSet<KoShape*> &shapes) override;
     void deactivate() override;
 
 
     void slotChangeVanishingPointAngle(double value);
+    void slotChangeTwoPointDensity(double value);
 
 private Q_SLOTS:
     void removeAllAssistants();

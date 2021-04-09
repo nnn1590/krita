@@ -188,7 +188,7 @@ bool KisKraSaver::savePalettes(KoStore *store, KisImageSP image, const QString &
     if (m_d->doc->paletteList().size() == 0) {
         return true;
     }
-    for (const KoColorSetSP palette : m_d->doc->paletteList()) {
+    Q_FOREACH (const KoColorSetSP palette, m_d->doc->paletteList()) {
         // Ensure stored palettes are KPL.
         palette->setPaletteType(KoColorSet::KPL);
 
@@ -296,7 +296,7 @@ bool KisKraSaver::saveAnimationMetadata(KoStore *store, KisImageSP image, const 
 void KisKraSaver::savePalettesToXML(QDomDocument &doc, QDomElement &element)
 {
     QDomElement ePalette = doc.createElement(PALETTES);
-    for (const KoColorSetSP palette : m_d->doc->paletteList()) {
+    Q_FOREACH (const KoColorSetSP palette, m_d->doc->paletteList()) {
         // Ensure stored palettes are KPL.
         palette->setPaletteType(KoColorSet::KPL);
         QDomElement eFile =  doc.createElement("palette");
@@ -669,7 +669,7 @@ bool KisKraSaver::saveAssistants(KoStore* store, QString uri, bool external)
 
 bool KisKraSaver::saveAssistantsList(QDomDocument& doc, QDomElement& element)
 {
-    int count_ellipse = 0, count_perspective = 0, count_ruler = 0, count_vanishingpoint = 0,count_infiniteruler = 0, count_parallelruler = 0, count_concentricellipse = 0, count_fisheyepoint = 0, count_spline = 0;
+    int count_ellipse = 0, count_twopoint = 0, count_perspective = 0, count_ruler = 0, count_vanishingpoint = 0,count_infiniteruler = 0, count_parallelruler = 0, count_concentricellipse = 0, count_fisheyepoint = 0, count_spline = 0;
     QList<KisPaintingAssistantSP> assistants =  m_d->doc->assistants();
     if (!assistants.isEmpty()) {
         QDomElement assistantsElement = doc.createElement("assistants");
@@ -705,6 +705,10 @@ bool KisKraSaver::saveAssistantsList(QDomDocument& doc, QDomElement& element)
             else if (assist->id() == "fisheye-point"){
                 assist->saveXmlList(doc, assistantsElement, count_fisheyepoint);
                 count_fisheyepoint++;
+            }
+            else if (assist->id() == "two point"){
+                assist->saveXmlList(doc, assistantsElement, count_twopoint);
+                count_twopoint++;
             }
             else if (assist->id() == "ruler"){
                 assist->saveXmlList(doc, assistantsElement, count_ruler);
